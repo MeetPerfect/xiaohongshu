@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: xiaohongshu-auth
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      config:
+        server-addr: http://192.168.20.101:8848
+        prefix: ${spring.application.name}  # 配置 Data Id 前缀，这里使用应用名称作为前缀
+        group: DEFAULT_GROUP
+        namespace: xiaohongshu # 命名空间
+        file-extension: yaml
+        refresh-enabled: true
+      discovery:
+        enabled: true
+        group: DEFAULT_GROUP
+        namespace: xiaohongshu # 命名空间
+        server-addr: 192.168.20.101:8848

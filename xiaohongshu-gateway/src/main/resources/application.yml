@@ -1,0 +1,55 @@
+server:
+  port: 8000
+  
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: auth
+          uri: lb://xiaohongshu-auth
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+        - id: user
+          uri: lb://xiaohongshu-user
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix=1
+        - id: note
+          uri: lb://xiaohongshu-note
+          predicates:
+            - Path=/note/**
+          filters:
+            - StripPrefix=1
+        - id: user-relation
+          uri: lb://xiaohongshu-user-relation
+          predicates:
+            - Path=/relation/**
+          filters:
+            - StripPrefix=1
+  data:
+    redis:
+      database: 0
+      host: 192.168.20.101
+      port: 6379
+      password: 123456
+      timeout: 5s
+      connect-timeout: 5s
+      lettuce:
+        pool:
+          max-active: 200
+          max-wait: -1ms
+          min-idle: 0
+          max-idle: 10
+          
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer  # token 前缀
+  timeout: 259200
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: random-128
+  is-log: true

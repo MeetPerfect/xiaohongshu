@@ -1,0 +1,27 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.kaiming</groupId>
+        <artifactId>xiaohongshu</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <packaging>pom</packaging>
+    
+    <artifactId>xiaohongshu-framework</artifactId>
+    <name>${project.artifactId}</name>
+    <description>平台基础设施层：封装一些常用功能，供各个业务线拿来即用</description>
+
+    <modules>
+        <!-- 通用工具组件 -->
+        <module>xiaohongshu-common</module>
+        <!-- 接口日志组件 -->
+        <module>xiaohongshu-spring-boot-starter-biz-operationlog</module>
+        <!-- Jackson 组件 -->
+        <module>xiaohongshu-spring-boot-starter-jackson</module>
+        <!-- 业务上下文组件 -->
+        <module>xiaohongshu-spring-boot-starter-biz-context</module>
+    </modules>
+    
+</project>

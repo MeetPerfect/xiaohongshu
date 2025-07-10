@@ -1,0 +1,2 @@
+com.kaiming.framework.biz.context.config.ContextAutoConfiguration
+com.kaiming.framework.biz.context.config.FeignContextAutoConfiguration

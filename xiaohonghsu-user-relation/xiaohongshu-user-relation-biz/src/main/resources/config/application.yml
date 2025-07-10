@@ -1,0 +1,13 @@
+server:
+  port: 8087
+  
+spring:
+  profiles:
+    active: dev
+    
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  
+mq-consumer:
+  follow-unfollow:
+    rate-limit: 5000

@@ -24,6 +24,7 @@ import com.kaiming.xiaohongshu.note.biz.domain.mapper.TopicDOMapper;
 import com.kaiming.xiaohongshu.note.biz.enums.*;
 import com.kaiming.xiaohongshu.note.biz.model.dto.CollectUnCollectNoteMqDTO;
 import com.kaiming.xiaohongshu.note.biz.model.dto.LikeUnlikeNoteMqDTO;
+import com.kaiming.xiaohongshu.note.biz.model.dto.NoteOperateMqDTO;
 import com.kaiming.xiaohongshu.note.biz.model.vo.*;
 import com.kaiming.xiaohongshu.note.biz.rpc.DistributedIdGeneratorRpcService;
 import com.kaiming.xiaohongshu.note.biz.rpc.KeyValueRpcService;
@@ -204,7 +205,31 @@ public class NoteServiceImpl implements NoteService {
                 keyValueRpcService.deleteNoteContent(contentUuid);
             }
         }
+        
+        // 发送 MQ
+        // 构建消息体
+        NoteOperateMqDTO noteOperateMqDTO = NoteOperateMqDTO.builder()
+                .creatorId(creatorId)
+                .noteId(noteDO.getId())
+                .type(NoteOperateEnum.PUBLIC.getCode())
+                .build();
+        // 构建消息对象，并将 DTO 转成 Json 字符串设置到消息体中
+        Message<String> message = MessageBuilder.withPayload(JsonUtils.toJsonString(noteOperateMqDTO)).build();
+        // 通过冒号连接, 可让 MQ 发送给主题 Topic 时，携带上标签 Tag
+        String destination = MQConstants.TOPIC_NOTE_OPERATE + ":" + MQConstants.TAG_NOTE_PUBLISH;
 
+        // 异步发送 MQ 消息，提升接口响应速度
+        rocketMQTemplate.asyncSend(destination, message, new SendCallback() {
+            @Override
+            public void onSuccess(SendResult sendResult) {
+                log.info("==> 【笔记发布】MQ 发送成功，SendResult: {}", sendResult);
+            }
+
+            @Override
+            public void onException(Throwable throwable) {
+                log.error("==> 【笔记发布】MQ 发送异常: ", throwable);
+            }
+        });
         return Response.success();
     }
 
@@ -512,6 +537,30 @@ public class NoteServiceImpl implements NoteService {
         // 同步广播
         rocketMQTemplate.syncSend(MQConstants.TOPIC_DELETE_NOTE_LOCAL_CACHE, noteId);
         log.info("====> MQ：删除笔记本地缓存发送成功...");
+        
+        // 发送 MQ
+        // 构建消息体
+        NoteOperateMqDTO noteOperateMqDTO = NoteOperateMqDTO.builder()
+                .creatorId(selectNoteDO.getCreatorId())
+                .noteId(noteId)
+                .type(NoteOperateEnum.DELETE.getCode())
+                .build();
+        // 构建消息对象，并将 DTO 转成 Json 字符串设置到消息体中
+        Message<String> message = MessageBuilder.withPayload(JsonUtils.toJsonString(noteOperateMqDTO)).build();
+        // 通过冒号连接, 可让 MQ 发送给主题 Topic 时，携带上标签 Tag
+        String destination = MQConstants.TOPIC_NOTE_OPERATE + ":" + MQConstants.TAG_NOTE_DELETE;
+        // 异步发送 MQ 消息，提升接口响应速度
+        rocketMQTemplate.asyncSend(destination, message, new SendCallback() {
+            @Override
+            public void onSuccess(SendResult sendResult) {
+                log.info("==> 【笔记删除】MQ 发送成功，SendResult: {}", sendResult);
+            }
+
+            @Override
+            public void onException(Throwable throwable) {
+                log.error("==> 【笔记删除】MQ 发送异常: ", throwable);
+            }
+        });
         return Response.success();
     }
 

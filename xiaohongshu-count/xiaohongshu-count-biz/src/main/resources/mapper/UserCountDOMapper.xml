@@ -95,6 +95,11 @@
       values (#{userId}, #{count})
       on duplicate key update like_total = like_total + (#{count})
     </insert>
+    <insert id="insertOrUpdateNoteTotalByUserId" parameterType="map">
+      insert into t_user_count (user_id, note_total)
+      values (#{userId}, #{count})
+      on duplicate key update note_total = note_total + #{count};
+    </insert>
     <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.count.biz.domain.dataobject.UserCountDO">
     update t_user_count
     <set>

@@ -30,6 +30,11 @@ public interface NoteService {
      */
     Response<FindNoteDetailRespVO> findNoteDetail(FindNoteDetailReqVO findNoteDetailReqVO);
 
+    /**
+     * 更新笔记
+     * @param updateNoteReqVO
+     * @return
+     */
     Response<?> updateNote(UpdateNoteReqVO updateNoteReqVO);
 
     /**

@@ -26,4 +26,9 @@ public interface MQConstants {
      * Topic: 笔记操作（发布、删除）
      */
     String TOPIC_NOTE_OPERATE = "NoteOperateTopic";
+    
+    /**
+     * Topic: 关注数计数
+     */
+    String TOPIC_COUNT_FOLLOWING = "CountFollowingTopic";
 }

@@ -33,4 +33,11 @@ public interface InsertRecordMapper {
      * 用户获得的收藏数：计数变更
      */
     void insert2DataAlignUserCollectCountTempTable(@Param("tableNameSuffix") String tableNameSuffix, @Param("userId") Long userId);
+
+    /**
+     * 用户发布笔记数：计数变更
+     * @param tableNameSuffix
+     * @param userId
+     */
+    void insert2DataAlignUserNotePublishCountTempTable(@Param("tableNameSuffix") String tableNameSuffix, @Param("userId") Long userId);
 }

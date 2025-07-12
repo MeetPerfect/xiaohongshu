@@ -59,9 +59,9 @@
     <insert id="createDataAlignNotePublishCountTempTable" parameterType="map">
         CREATE TABLE IF NOT EXISTS `t_data_align_note_publish_count_temp_${tableNameSuffix}` (
          `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-         `note_id` bigint unsigned NOT NULL COMMENT '笔记ID',
+         `user_id` bigint unsigned NOT NULL COMMENT '用户ID',
          PRIMARY KEY (`id`) USING BTREE,
-            UNIQUE KEY `uk_note_id` (`note_id`)
+            UNIQUE KEY `uk_user_id` (`user_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据对齐日增量表：用户发布笔记数';
     </insert>
 </mapper>

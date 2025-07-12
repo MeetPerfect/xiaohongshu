@@ -17,5 +17,8 @@
     <insert id="insert2DataAlignUserCollectCountTempTable" parameterType="map">
         insert into `t_data_align_user_collect_count_temp_${tableNameSuffix}` (user_id) values (#{userId})
     </insert>
+    <insert id="insert2DataAlignUserNotePublishCountTempTable" parameterType="map">
+        insert into `t_data_align_note_publish_count_temp_${tableNameSuffix}` (user_id) values (#{userId})
+    </insert>
 
 </mapper>

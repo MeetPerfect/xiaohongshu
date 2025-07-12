@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kaiming.xiaohongshu.data.align.domain.mapper.InsertRecordMapper">
+
+    <insert id="insert2DataAlignNoteLikeCountTempTable" parameterType="map">
+        insert into `t_data_align_note_like_count_temp_${tableNameSuffix}` (note_id) values (#{noteId})
+    </insert>
+
+    <insert id="insert2DataAlignUserLikeCountTempTable" parameterType="map">
+        insert into `t_data_align_user_like_count_temp_${tableNameSuffix}` (user_id) values (#{userId})
+    </insert>
+
+</mapper>

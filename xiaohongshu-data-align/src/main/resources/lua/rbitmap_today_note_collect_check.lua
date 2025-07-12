@@ -11,4 +11,4 @@ if exists == 0 then
 end
 
 -- 校验该变更数据是否已经存在(1 表示已存在，0 表示不存在)
-return redis.call('R.GETBIT', key, noteIdAndNoteCreatorId)
+return redis.call('R.SETBIT', key, noteIdAndNoteCreatorId)

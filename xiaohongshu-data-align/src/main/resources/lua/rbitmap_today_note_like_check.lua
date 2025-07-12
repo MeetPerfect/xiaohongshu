@@ -5,7 +5,7 @@ local noteIdAndNoteCreatorId = ARGV[1] -- Redis Value
 local exists = redis.call('EXISTS', key)
 if exists == 0 then
     -- 创建咆哮位图
-    redis.call('R.SETBIT', key, noteIdAndNoteCreatorId, 1)
+    redis.call('ROARING.SETBIT', key, noteIdAndNoteCreatorId, 1)
     -- 设置过期时间，一天后过期
     redis.call("EXPIRE", key, 20 * 60 * 60)
 end

@@ -31,11 +31,25 @@
 
 ### 开发环境
 
-| 技术 |      |      |
-| ---- | ---- | ---- |
-|      |      |      |
-|      |      |      |
-|      |      |      |
+| 技术          | 版本 | 说明 | 官网地址 |
+| ------------- | ---- | ---- | -------- |
+| SpringBoot    |      |      |          |
+| MyBatis       |      |      |          |
+| Lombok        |      |      |          |
+| MySql         |      |      |          |
+| Redis         |      |      |          |
+| nacos         |      |      |          |
+| Cassandra     |      |      |          |
+| MinIO         |      |      |          |
+| OSS           |      |      |          |
+| Hutool        |      |      |          |
+| Zookeeper     |      |      |          |
+| RocketMQ      |      |      |          |
+| XXL-JOB       |      |      |          |
+| Elasticsearch |      |      |          |
+|               |      |      |          |
+| Tomcat        |      |      |          |
+| Docker        |      |      |          |
 
 
 

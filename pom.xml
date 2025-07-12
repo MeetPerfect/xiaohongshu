@@ -30,7 +30,8 @@
         <module>xiaohongshu-note</module>
         <module>xiaohonghsu-user-relation</module>
         <module>xiaohongshu-count</module>
-
+        <module>xiaohongshu-data-align</module>
+        
     </modules>
 
 
@@ -84,6 +85,7 @@
         <caffeine.version>3.1.8</caffeine.version>
         <rocketmq.version>2.2.3</rocketmq.version>
         <buffertrigger.version>0.2.21</buffertrigger.version>
+        <xxl-job.version>2.4.1</xxl-job.version>
     </properties>
 
     <dependencyManagement>
@@ -309,6 +311,12 @@
                 <groupId>com.github.phantomthief</groupId>
                 <artifactId>buffer-trigger</artifactId>
                 <version>${buffertrigger.version}</version>
+            </dependency>
+            <!-- XXL-JOB 分布式定时任务调度 -->
+            <dependency>
+                <groupId>com.xuxueli</groupId>
+                <artifactId>xxl-job-core</artifactId>
+                <version>${xxl-job.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

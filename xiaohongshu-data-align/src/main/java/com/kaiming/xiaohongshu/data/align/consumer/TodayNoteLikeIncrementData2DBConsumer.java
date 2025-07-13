@@ -63,18 +63,18 @@ public class TodayNoteLikeIncrementData2DBConsumer implements RocketMQListener<S
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
         // ------------------------- 笔记的点赞数变更记录 -------------------------
-//        String bloomKey = RedisKeyConstants.buildBloomUserNoteLikeListKey(date);
+//        String noteBloomKey = RedisKeyConstants.buildBloomUserNoteLikeNoteIdListKey(date);
         // bloom Redis Key : TODO 后续修改使用 rbitmap
-        String noteBloomKey = RedisKeyConstants.buildBloomUserNoteLikeNoteIdListKey(date);
+        String rbitmapKey = RedisKeyConstants.buildRbitmapUserNoteLikeNoteIdListKey(date);
         // 1. 布隆过滤器判断该日增量数据是否已经记录
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         // 脚本路径
         script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_today_note_like_check.lua")));
         script.setResultType(Long.class);
         // 执行 Lua 脚本，拿到返回结果
-        Long result = redisTemplate.execute(script, Collections.singletonList(noteBloomKey), noteId);
+        Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapKey), noteId);
         // Lua 脚本：添加到布隆过滤器
-        RedisScript<Long> bloomAddScript = RedisScript.of("return redis.call('BF.ADD', KEYS[1], ARGV[1])", Long.class);
+        RedisScript<Long> bloomAddScript = RedisScript.of("return redis.call('R.SETBIT', KEYS[1], ARGV[1], 1)", Long.class);
 
         // 若布隆过滤器判断不存在（绝对正确）
         if (Objects.equals(result, 0L)) {
@@ -91,11 +91,11 @@ public class TodayNoteLikeIncrementData2DBConsumer implements RocketMQListener<S
             }
 
             //  3. 数据库写入成功后，再添加布隆过滤器中
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(noteBloomKey), noteId);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(rbitmapKey), noteId);
         }
         // ------------------------- 笔记发布者获得的点赞数变更记录 -------------------------
-        String userBloomKey = RedisKeyConstants.buildBloomUserNoteLikeUserIdListKey(date);
-        result = redisTemplate.execute(script, Collections.singletonList(userBloomKey), noteCreatorId);
+        String userRbitmapKey = RedisKeyConstants.buildRbitmapUserNoteLikeUserIdListKey(date);
+        result = redisTemplate.execute(script, Collections.singletonList(userRbitmapKey), noteCreatorId);
         if (Objects.equals(result, 0L)) {
             
             long userIdHashKey = noteCreatorId % tableShards;
@@ -108,7 +108,7 @@ public class TodayNoteLikeIncrementData2DBConsumer implements RocketMQListener<S
                 log.error("", e);
             }
             // 4. 数据库写入成功后，再添加布隆过滤器中
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(userBloomKey), noteCreatorId);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(userRbitmapKey), noteCreatorId);
         }
     }
 }

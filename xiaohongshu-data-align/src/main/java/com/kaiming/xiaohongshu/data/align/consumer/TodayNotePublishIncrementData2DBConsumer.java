@@ -62,13 +62,14 @@ public class TodayNotePublishIncrementData2DBConsumer implements RocketMQListene
         String date = LocalDate.now()
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        String bloomKey = RedisKeyConstants.buildBloomUserNoteOperateListKey(date);
+//        String bloomKey = RedisKeyConstants.buildBloomUserNoteOperateListKey(date);
+        String rbitmapKey = RedisKeyConstants.buildRbitmapUserNoteOperateListKey(date);
         // 脚本
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/bloom_today_user_note_publish_check.lua")));
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_today_user_note_publish_check.lua")));
         script.setResultType(Long.class);
         // 执行 Lua 脚本，拿到返回结果
-        Long result = redisTemplate.execute(script, Collections.singletonList(bloomKey), noteId);
+        Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapKey), noteId);
         
         if (Objects.equals(result, 0L)) {
             // 2. 若无，才会落库，减轻数据库压力
@@ -80,8 +81,8 @@ public class TodayNotePublishIncrementData2DBConsumer implements RocketMQListene
             insertMapper.insert2DataAlignUserNotePublishCountTempTable(TableConstants.buildTableNameSuffix(date, userIdHashKey), noteCreatorId);
             
             // TODO: 3. 数据库写入成功后，再添加布隆过滤器中
-            RedisScript<Long> bloomAddScript  = RedisScript.of("return redis.call('BF.ADD', KEYS[1], ARGV[1]')", Long.class);
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(bloomKey), noteId);
+            RedisScript<Long> bloomAddScript  = RedisScript.of("return redis.call('R.SETBIT', KEYS[1], ARGV[1], 1)", Long.class);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(rbitmapKey), noteId);
         }
 
     }

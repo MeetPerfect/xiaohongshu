@@ -7,4 +7,28 @@
         update t_user_count set following_total = #{followingTotal}
         where user_id = #{userId}
     </update>
+    <update id="updateNoteLikeTotalByUserId" parameterType="map">
+        update t_note_count set like_total = #{noteLikeTotal}
+         where note_Id = #{noteId}
+    </update>
+    <update id="updateNoteCollectTotalByUserId" parameterType="map">
+        update t_note_count set collect_total = #{noteCollectTotal}
+        where note_Id = #{noteId}
+    </update>
+    <update id="updateUserFansTotalByUserId" parameterType="map">
+        update t_user_count set fans_total = #{fansTotal}
+        where user_id = #{userId}
+    </update>
+    <update id="updateUserLikeTotalByUserId" parameterType="map">
+        update t_user_count set like_total = #{likeTotal}
+        where user_id = #{userId}
+    </update>
+    <update id="updateUserCollectTotalByUserId" parameterType="map">
+        update t_user_count set collect_total = #{collectTotal}
+        where user_id = #{userId}
+    </update>
+    <update id="updateUserNoteTotalByUserId" parameterType="map">
+        update t_user_count set note_total = #{noteTotal}
+        where user_id = #{userId}
+    </update>
 </mapper>

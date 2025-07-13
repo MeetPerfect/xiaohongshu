@@ -40,7 +40,7 @@ import java.util.Objects;
 public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener<String> {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
-    @Value("{table.shard}")
+    @Value("${table.shards}")
     private int tableShards;
     @Resource
     private InsertMapper insertMapper;
@@ -61,21 +61,21 @@ public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener
         String date = LocalDate.now()
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         // 源用户 ID 对应的 Bloom Key
-        String userBloomKey = RedisKeyConstants.buildBloomUserFollowListKey(date);
-
+//        String userBloomKey = RedisKeyConstants.buildBloomUserFollowListKey(date);
+        String userRbitmapKey = RedisKeyConstants.buildRbitmapUserFollowListKey(date);
         // 布隆过滤器判断该日增量数据是否已经记录
         // 1. 布隆过滤器判断该日增量数据是否已经记录
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         // Lua 脚本路径
-        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/bloom_today_user_follow_check.lua")));
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_today_user_follow_check.lua")));
         // 返回值类型
         script.setResultType(Long.class);
 
         // 执行 Lua 脚本，拿到返回结果
-        Long result = redisTemplate.execute(script, Collections.singletonList(userBloomKey), userId);
+        Long result = redisTemplate.execute(script, Collections.singletonList(userRbitmapKey), userId);
 
         // Lua 脚本：添加到布隆过滤器
-        RedisScript<Long> bloomAddScript = RedisScript.of("return redis.call('BF.ADD', KEYS[1], ARGV[1])", Long.class);
+        RedisScript<Long> bloomAddScript = RedisScript.of("return redis.call('R.SETBIT', KEYS[1], ARGV[1], 1)", Long.class);
         
         // 若布隆过滤器判断不存在（绝对正确）
         if (Objects.equals(result, 0L)) {
@@ -89,15 +89,16 @@ public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener
             } catch (Exception e) {
                 log.error("", e);
             }
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(userBloomKey), userId);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(userRbitmapKey), userId);
         }
 
 
         // ------------------------- 目标用户的粉丝数变更记录 -------------------------
         // 目标用户 ID 对应的 Bloom Key
-        String targetUserBloomKey = RedisKeyConstants.buildBloomUserFansListKey(date);
+//        String targetUserBloomKey = RedisKeyConstants.buildBloomUserFansListKey(date);
+        String targetUserRbitmapKey = RedisKeyConstants.buildRbitmapUserFansListKey(date);
         // 布隆过滤器判断该日增量数据是否已经记录
-        result = redisTemplate.execute(script, Collections.singletonList(targetUserBloomKey), targetUserId);
+        result = redisTemplate.execute(script, Collections.singletonList(targetUserRbitmapKey), targetUserId);
         // 若布隆过滤器判断不存在（绝对正确）
         if (Objects.equals(result, 0L)) {
             // 若无，才会落库，减轻数据库压力
@@ -111,7 +112,7 @@ public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener
                 log.error("", e);
             }
             // 数据库写入成功后，再添加布隆过滤器中
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(targetUserBloomKey), targetUserId);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(targetUserRbitmapKey), targetUserId);
         }
     }
 }

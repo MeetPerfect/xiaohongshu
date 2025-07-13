@@ -63,7 +63,8 @@ public class TodayNoteCollectIncrementData2DBConsumer implements RocketMQListene
         String date = LocalDate.now()
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         // ------------------------- 笔记的收藏数变更记录 -------------------------
-        String noteBloomKey = RedisKeyConstants.buildBloomUserNoteCollectNoteIdListKey(date);
+//        String noteBloomKey = RedisKeyConstants.buildBloomUserNoteCollectNoteIdListKey(date);
+        String noteRbitmapKey = RedisKeyConstants.buildRBitmapUserNoteCollectNoteIdListKey(date);
         // 1. rbitmap判断该日增量数据是否已经记录
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         // Lua 脚本路径
@@ -72,8 +73,8 @@ public class TodayNoteCollectIncrementData2DBConsumer implements RocketMQListene
         script.setResultType(Long.class);
 
         // 执行 Lua 脚本，拿到返回结果
-        Long result = redisTemplate.execute(script, Collections.singletonList(noteBloomKey), noteId);
-        RedisScript<Long> bloomAddScript = RedisScript.of("return redis.call('R.SETBIT', KEYS[1], ARGV[1])", Long.class);
+        Long result = redisTemplate.execute(script, Collections.singletonList(noteRbitmapKey), noteId);
+        RedisScript<Long> bloomAddScript = RedisScript.of("return redis.call('R.SETBIT', KEYS[1], ARGV[1], 1)", Long.class);
         // 2. 若无，才会落库，减轻数据库压力
         if (Objects.equals(result, 0L)) {
             // 根据分片总数，取模，分别获取对应的分片序号
@@ -86,11 +87,11 @@ public class TodayNoteCollectIncrementData2DBConsumer implements RocketMQListene
                 log.error("", ex);
             }
             // 3. 数据库写入成功后，再添加布隆过滤器中
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(noteBloomKey), noteId);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(noteRbitmapKey), noteId);
         }
         // ------------------------- 笔记发布者的收藏数变更记录 -------------------------
-        String userBloomKey = RedisKeyConstants.buildBloomUserNoteCollectUserIdListKey(date);
-        result = redisTemplate.execute(script, Collections.singletonList(userBloomKey), noteCreatorId);
+        String userRbitmapKey = RedisKeyConstants.buildRBitmapUserNoteCollectUserIdListKey(date);
+        result = redisTemplate.execute(script, Collections.singletonList(userRbitmapKey), noteCreatorId);
 
         if (Objects.equals(result, 0L)) {
 
@@ -101,7 +102,7 @@ public class TodayNoteCollectIncrementData2DBConsumer implements RocketMQListene
             } catch (Exception e) {
                 log.error("", e);
             }
-            redisTemplate.execute(bloomAddScript, Collections.singletonList(userBloomKey), noteCreatorId);
+            redisTemplate.execute(bloomAddScript, Collections.singletonList(userRbitmapKey), noteCreatorId);
         }
     }
 }

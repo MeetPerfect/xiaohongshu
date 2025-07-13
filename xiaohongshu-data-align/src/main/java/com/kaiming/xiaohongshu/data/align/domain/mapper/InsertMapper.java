@@ -11,7 +11,7 @@ import org.apache.ibatis.annotations.Param;
  * @Create 2025/7/12 12:41
  * @Version 1.0
  */
-public interface InsertRecordMapper {
+public interface InsertMapper {
 
     /**
      * 笔记点赞数：计数变更

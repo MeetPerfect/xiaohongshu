@@ -4,7 +4,7 @@ import com.kaiming.framework.common.util.JsonUtils;
 import com.kaiming.xiaohongshu.data.align.constant.MQConstants;
 import com.kaiming.xiaohongshu.data.align.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.data.align.constant.TableConstants;
-import com.kaiming.xiaohongshu.data.align.domain.mapper.InsertRecordMapper;
+import com.kaiming.xiaohongshu.data.align.domain.mapper.InsertMapper;
 import com.kaiming.xiaohongshu.data.align.model.dto.NoteOperateMqDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +43,7 @@ public class TodayNotePublishIncrementData2DBConsumer implements RocketMQListene
     @Value("${table.shards}")
     private int tableShards;
     @Resource
-    private InsertRecordMapper insertRecordMapper;
+    private InsertMapper insertMapper;
     
     @Override
     public void onMessage(String body) {
@@ -77,7 +77,7 @@ public class TodayNotePublishIncrementData2DBConsumer implements RocketMQListene
             // 根据分片总数，取模，分别获取对应的分片序号
             long userIdHashKey = noteCreatorId % tableShards;
             
-            insertRecordMapper.insert2DataAlignUserNotePublishCountTempTable(TableConstants.buildTableNameSuffix(date, userIdHashKey), noteCreatorId);
+            insertMapper.insert2DataAlignUserNotePublishCountTempTable(TableConstants.buildTableNameSuffix(date, userIdHashKey), noteCreatorId);
             
             // TODO: 3. 数据库写入成功后，再添加布隆过滤器中
             RedisScript<Long> bloomAddScript  = RedisScript.of("return redis.call('BF.ADD', KEYS[1], ARGV[1]')", Long.class);

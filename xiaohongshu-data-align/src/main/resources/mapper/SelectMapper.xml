@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kaiming.xiaohongshu.data.align.domain.mapper.SelectMapper">
+
+    <select id="selectBatchFromDataAlignFollowingCountTempTable" resultType="long" parameterType="map">
+        select user_id from `t_data_align_following_count_temp_${tableNameSuffix}` order by id
+            limit #{batchSize}
+    </select>
+
+    <select id="selectCountFromFollowingTableByUserId" parameterType="map" resultType="int">
+        select count(*) from t_following where user_id = #{userId}
+    </select>
+</mapper>

@@ -4,14 +4,13 @@ import com.kaiming.framework.common.util.JsonUtils;
 import com.kaiming.xiaohongshu.data.align.constant.MQConstants;
 import com.kaiming.xiaohongshu.data.align.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.data.align.constant.TableConstants;
-import com.kaiming.xiaohongshu.data.align.domain.mapper.InsertRecordMapper;
+import com.kaiming.xiaohongshu.data.align.domain.mapper.InsertMapper;
 import com.kaiming.xiaohongshu.data.align.model.dto.CollectUnCollectNoteMqDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -43,7 +42,7 @@ public class TodayNoteCollectIncrementData2DBConsumer implements RocketMQListene
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
     @Resource
-    private InsertRecordMapper insertRecordMapper;
+    private InsertMapper insertMapper;
     @Resource
     private TransactionTemplate transactionTemplate;
     @Value("${table.shards}")
@@ -86,8 +85,8 @@ public class TodayNoteCollectIncrementData2DBConsumer implements RocketMQListene
             // - t_data_align_user_collect_count_temp_日期_分片序号
             transactionTemplate.execute(status -> {
                 try {
-                    insertRecordMapper.insert2DataAlignNoteCollectCountTempTable(TableConstants.buildTableNameSuffix(date, noteIdHashKey), noteId);
-                    insertRecordMapper.insert2DataAlignUserCollectCountTempTable(TableConstants.buildTableNameSuffix(date, userIdHashKey), noteCreatorId);
+                    insertMapper.insert2DataAlignNoteCollectCountTempTable(TableConstants.buildTableNameSuffix(date, noteIdHashKey), noteId);
+                    insertMapper.insert2DataAlignUserCollectCountTempTable(TableConstants.buildTableNameSuffix(date, userIdHashKey), noteCreatorId);
                     
                     return true;
                 } catch (Exception ex) {

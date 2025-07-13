@@ -5,7 +5,7 @@ import com.kaiming.xiaohongshu.data.align.constant.MQConstants;
 
 import com.kaiming.xiaohongshu.data.align.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.data.align.constant.TableConstants;
-import com.kaiming.xiaohongshu.data.align.domain.mapper.InsertRecordMapper;
+import com.kaiming.xiaohongshu.data.align.domain.mapper.InsertMapper;
 import com.kaiming.xiaohongshu.data.align.model.dto.FollowUnfollowMqDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,6 @@ import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Objects;
@@ -44,7 +43,7 @@ public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener
     @Value("{table.shard}")
     private int tableShards;
     @Resource
-    private InsertRecordMapper insertRecordMapper;
+    private InsertMapper insertMapper;
 
     @Override
     public void onMessage(String body) {
@@ -85,7 +84,7 @@ public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener
             // 将日增量变更数据，分别写入两张表
             // - t_data_align_following_count_temp_日期_分片序号
             try {
-                insertRecordMapper.insert2DataAlignUserFollowingCountTempTable(
+                insertMapper.insert2DataAlignUserFollowingCountTempTable(
                         TableConstants.buildTableNameSuffix(date, userIdHashKey), userId);
             } catch (Exception e) {
                 log.error("", e);
@@ -106,7 +105,7 @@ public class TodayUserFollowIncrementData2DBConsumer implements RocketMQListener
             long targetUserIdHashKey = targetUserId % tableShards;
 
             try {
-                insertRecordMapper.insert2DataAlignUserFansCountTempTable(
+                insertMapper.insert2DataAlignUserFansCountTempTable(
                         TableConstants.buildTableNameSuffix(date, targetUserIdHashKey), targetUserId);
             } catch (Exception e) {
                 log.error("", e);

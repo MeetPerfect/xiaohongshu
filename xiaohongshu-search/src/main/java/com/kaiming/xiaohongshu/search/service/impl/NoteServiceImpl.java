@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.kaiming.framework.common.constant.DateConstants;
 import com.kaiming.framework.common.response.PageResponse;
 import com.kaiming.framework.common.util.NumberUtils;
+import com.kaiming.xiaohongshu.search.enums.NoteSortTypeEnum;
 import com.kaiming.xiaohongshu.search.index.NoteIndex;
 import com.kaiming.xiaohongshu.search.model.vo.SearchNoteReqVO;
 import com.kaiming.xiaohongshu.search.model.vo.SearchNoteRespVO;
@@ -18,6 +19,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.lucene.search.function.CombineFunction;
 import org.elasticsearch.common.lucene.search.function.FieldValueFactorFunction;
 import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FieldValueFactorFunctionBuilder;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * ClassName: NoteServiceImpl
@@ -62,49 +65,77 @@ public class NoteServiceImpl implements NoteService {
         String keyword = searchNoteReqVO.getKeyword();
         // 页码
         Integer pageNo = searchNoteReqVO.getPageNo();
+        // 类型
+        Integer type = searchNoteReqVO.getType();
+        // 排序
+        Integer sort = searchNoteReqVO.getSort();
         // 构建 SearchRequest, 指定查询索引
         SearchRequest searchRequest = new SearchRequest(NoteIndex.NAME);
 
         // 创建查询器
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        SearchSourceBuilder sourceBuilder  = new SearchSourceBuilder();
 
-        QueryBuilder queryBuilder = QueryBuilders.multiMatchQuery(keyword)
-                .field(NoteIndex.FIELD_NOTE_TITLE, 2.0f)    // 手动设置笔记标题的权重值为 2.0
-                .field(NoteIndex.FIELD_NOTE_TOPIC);     // 不设置，权重默认为 1.0
-        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionBuilders = new FunctionScoreQueryBuilder.FilterFunctionBuilder[]{
-                // function 1
-                new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                        new FieldValueFactorFunctionBuilder(NoteIndex.FIELD_NOTE_LIKE_TOTAL)
-                                .factor(0.5f)
-                                .modifier(FieldValueFactorFunction.Modifier.SQRT)
-                                .missing(0)
-                ),
-                // function 2
-                new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                        new FieldValueFactorFunctionBuilder(NoteIndex.FIELD_NOTE_COLLECT_TOTAL)
-                                .factor(0.3f)
-                                .modifier(FieldValueFactorFunction.Modifier.SQRT)
-                                .missing(0)
-                ),
-                // function 3
-                new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                        new FieldValueFactorFunctionBuilder(NoteIndex.FIELD_NOTE_COMMENT_TOTAL)
-                                .factor(0.2f)
-                                .modifier(FieldValueFactorFunction.Modifier.SQRT)
-                                .missing(0)
-                )
-        };
-        // 构建 function_score 查询
-        // "score_mode": "sum",
-        // "boost_mode": "sum"
+        BoolQueryBuilder boolQueryBuilder  = QueryBuilders.boolQuery().must(
+                QueryBuilders.multiMatchQuery(keyword)
+                        .field(NoteIndex.FIELD_NOTE_TITLE, 2.0f)    // 手动设置笔记标题的权重值为 2.0
+                        .field(NoteIndex.FIELD_NOTE_TOPIC)  // 不设置，权重默认为 1.0
+        );
 
-        FunctionScoreQueryBuilder functionScoreQueryBuilder = QueryBuilders.functionScoreQuery(queryBuilder,
-                        filterFunctionBuilders)
-                .scoreMode(FunctionScoreQuery.ScoreMode.SUM)        // score_mode 为 sum
-                .boostMode(CombineFunction.SUM);            // boost_mode 为 sum
+        // 若添加笔记类型
+        if (Objects.nonNull(type)) {
+            boolQueryBuilder.filter(QueryBuilders.termQuery(NoteIndex.FIELD_NOTE_TYPE, type));
+        }
+        
+        // 排序
+        NoteSortTypeEnum noteSortTypeEnum = NoteSortTypeEnum.valueOf(sort);
+        
+        // 设置排序
+        if (Objects.nonNull(noteSortTypeEnum)) {
+            switch (noteSortTypeEnum) {
+                case LATEST -> sourceBuilder.sort(new FieldSortBuilder(NoteIndex.FIELD_NOTE_CREATE_TIME).order(SortOrder.DESC));
+                case MOST_LIKE -> sourceBuilder.sort(new FieldSortBuilder(NoteIndex.FIELD_NOTE_LIKE_TOTAL).order(SortOrder.DESC));
+                case MOST_COLLECT -> sourceBuilder.sort(new FieldSortBuilder(NoteIndex.FIELD_NOTE_COLLECT_TOTAL).order(SortOrder.DESC));
+                case MOST_COMMENT -> sourceBuilder.sort(new FieldSortBuilder(NoteIndex.FIELD_NOTE_COMMENT_TOTAL).order(SortOrder.DESC));
+            }
+            // 设置查询
+            sourceBuilder.query(boolQueryBuilder);
+        } else {
+            // 综合排序，自定义评分
+            FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionBuilders = new FunctionScoreQueryBuilder.FilterFunctionBuilder[]{
+                    // function 1
+                    new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                            new FieldValueFactorFunctionBuilder(NoteIndex.FIELD_NOTE_LIKE_TOTAL)
+                                    .factor(0.5f)
+                                    .modifier(FieldValueFactorFunction.Modifier.SQRT)
+                                    .missing(0)
+                    ),
+                    // function 2
+                    new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                            new FieldValueFactorFunctionBuilder(NoteIndex.FIELD_NOTE_COLLECT_TOTAL)
+                                    .factor(0.3f)
+                                    .modifier(FieldValueFactorFunction.Modifier.SQRT)
+                                    .missing(0)
+                    ),
+                    // function 3
+                    new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                            new FieldValueFactorFunctionBuilder(NoteIndex.FIELD_NOTE_COMMENT_TOTAL)
+                                    .factor(0.2f)
+                                    .modifier(FieldValueFactorFunction.Modifier.SQRT)
+                                    .missing(0)
+                    )
+            };
+            // 构建 function_score 查询
+            // "score_mode": "sum",
+            // "boost_mode": "sum"
 
-        // 设置查询
-        sourceBuilder.query(functionScoreQueryBuilder);
+            FunctionScoreQueryBuilder functionScoreQueryBuilder = QueryBuilders.functionScoreQuery(boolQueryBuilder,
+                            filterFunctionBuilders)
+                    .scoreMode(FunctionScoreQuery.ScoreMode.SUM)        // score_mode 为 sum
+                    .boostMode(CombineFunction.SUM);            // boost_mode 为 sum
+
+            // 设置查询
+            sourceBuilder.query(functionScoreQueryBuilder);
+        }
 
         // 设置排序
         sourceBuilder.sort(new FieldSortBuilder("_score").order(SortOrder.DESC));
@@ -165,7 +196,7 @@ public class NoteServiceImpl implements NoteService {
                         && hit.getHighlightFields().containsKey(NoteIndex.FIELD_NOTE_TITLE)) {
                     highlightedTitle = hit.getHighlightFields().get(NoteIndex.FIELD_NOTE_TITLE).fragments()[0].string();
                 }
-                
+
                 // 构建实体类 VO
                 SearchNoteRespVO searchNoteRespVO = SearchNoteRespVO.builder()
                         .noteId(noteId)
@@ -174,9 +205,10 @@ public class NoteServiceImpl implements NoteService {
                         .avatar(avatar)
                         .nickname(nickname)
                         .updateTime(updateTime)
+                        .highlightTitle(highlightedTitle)
                         .likeTotal(NumberUtils.formatNumberString(likeTotal))
                         .build();
-                
+
                 searchNoteRspVOS.add(searchNoteRespVO);
             }
         } catch (Exception e) {

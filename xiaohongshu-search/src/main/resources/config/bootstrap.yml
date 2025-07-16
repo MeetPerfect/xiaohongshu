@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: xiaohongshu-search
+  profiles:
+    active: dev
+    
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        group: DEFAULT_GROUP
+        namespace: xiaohongshu
+        server-addr: 192.168.20.101:8848

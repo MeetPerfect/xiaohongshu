@@ -4,12 +4,15 @@ import cn.hutool.core.collection.CollUtil;
 import com.google.common.collect.Lists;
 import com.kaiming.framework.common.constant.DateConstants;
 import com.kaiming.framework.common.response.PageResponse;
+import com.kaiming.framework.common.util.DateUtils;
 import com.kaiming.framework.common.util.NumberUtils;
+import com.kaiming.xiaohongshu.search.enums.NotePublishTimeRangeEnum;
 import com.kaiming.xiaohongshu.search.enums.NoteSortTypeEnum;
 import com.kaiming.xiaohongshu.search.index.NoteIndex;
 import com.kaiming.xiaohongshu.search.model.vo.SearchNoteReqVO;
 import com.kaiming.xiaohongshu.search.model.vo.SearchNoteRespVO;
 import com.kaiming.xiaohongshu.search.service.NoteService;
+import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.search.SearchRequest;
@@ -20,7 +23,6 @@ import org.elasticsearch.common.lucene.search.function.CombineFunction;
 import org.elasticsearch.common.lucene.search.function.FieldValueFactorFunction;
 import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FieldValueFactorFunctionBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
@@ -69,6 +71,8 @@ public class NoteServiceImpl implements NoteService {
         Integer type = searchNoteReqVO.getType();
         // 排序
         Integer sort = searchNoteReqVO.getSort();
+        // 发布时间范围
+        Integer publishTimeRange = searchNoteReqVO.getPublishTimeRange();
         // 构建 SearchRequest, 指定查询索引
         SearchRequest searchRequest = new SearchRequest(NoteIndex.NAME);
 
@@ -85,7 +89,33 @@ public class NoteServiceImpl implements NoteService {
         if (Objects.nonNull(type)) {
             boolQueryBuilder.filter(QueryBuilders.termQuery(NoteIndex.FIELD_NOTE_TYPE, type));
         }
-        
+        // 按发布时间范围过滤
+        NotePublishTimeRangeEnum notePublishTimeRangeEnum = NotePublishTimeRangeEnum.valueOf(publishTimeRange);
+
+        if (Objects.nonNull(notePublishTimeRangeEnum)) {
+            // 结束时间
+            String endTime = LocalDateTime.now().format(DateConstants.DATE_FORMAT_Y_M_D_H_M_S);
+            
+            String startTime = null;
+            switch (notePublishTimeRangeEnum) {
+                case DAY -> 
+                    startTime = DateUtils.localDateTime2String(LocalDateTime.now().minusDays(1));
+                
+                case WEEK -> 
+                    startTime = DateUtils.localDateTime2String(LocalDateTime.now().minusWeeks(1));
+                case HALF_YEAR -> 
+                    startTime = DateUtils.localDateTime2String(LocalDateTime.now().minusMonths(6));
+            }
+            
+            // 设置时间范围
+            if (StringUtils.isNotBlank(startTime)) {
+                boolQueryBuilder.filter(QueryBuilders.rangeQuery(NoteIndex.FIELD_NOTE_CREATE_TIME)
+                        .gte(startTime)
+                        .lte(endTime)
+                );
+            }
+        }
+
         // 排序
         NoteSortTypeEnum noteSortTypeEnum = NoteSortTypeEnum.valueOf(sort);
         
@@ -187,6 +217,9 @@ public class NoteServiceImpl implements NoteService {
                 // 获取更新时间
                 String updateTimeStr = (String) sourceAsMap.get(NoteIndex.FIELD_NOTE_UPDATE_TIME);
                 LocalDateTime updateTime = LocalDateTime.parse(updateTimeStr, DateConstants.DATE_FORMAT_Y_M_D_H_M_S);
+
+                Integer collectTotal = (Integer) sourceAsMap.get(NoteIndex.FIELD_NOTE_COLLECT_TOTAL);
+                Integer commentTotal = (Integer) sourceAsMap.get(NoteIndex.FIELD_NOTE_COMMENT_TOTAL);
                 Integer likeTotal = (Integer) sourceAsMap.get(NoteIndex.FIELD_NOTE_LIKE_TOTAL);
 
 
@@ -204,9 +237,11 @@ public class NoteServiceImpl implements NoteService {
                         .title(title)
                         .avatar(avatar)
                         .nickname(nickname)
-                        .updateTime(updateTime)
+                        .updateTime(DateUtils.formatRelativeTime(updateTime))
                         .highlightTitle(highlightedTitle)
                         .likeTotal(NumberUtils.formatNumberString(likeTotal))
+                        .collectTotal(NumberUtils.formatNumberString(collectTotal))
+                        .commentTotal(NumberUtils.formatNumberString(commentTotal))
                         .build();
 
                 searchNoteRspVOS.add(searchNoteRespVO);

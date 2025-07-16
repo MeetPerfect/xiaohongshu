@@ -54,11 +54,20 @@ public class SearchNoteRespVO {
     /**
      * 最后一次编辑时间
      */
-    private LocalDateTime updateTime;
+    private String updateTime;
 
     /**
      * 被点赞总数
      */
     private String likeTotal;
+    /**
+     * 被评论数
+     */
+    private String commentTotal;
+
+    /**
+     * 被收藏数
+     */
+    private String collectTotal;
 
 }

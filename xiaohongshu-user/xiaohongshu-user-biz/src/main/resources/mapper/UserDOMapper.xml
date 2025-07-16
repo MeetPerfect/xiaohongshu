@@ -3,7 +3,7 @@
 <mapper namespace="com.kaiming.xiaohongshu.user.biz.domain.mapper.UserDOMapper">
   <resultMap id="BaseResultMap" type="com.kaiming.xiaohongshu.user.biz.domain.dataobject.UserDO">
     <id column="id" jdbcType="BIGINT" property="id" />
-    <result column="xiaohashu_id" jdbcType="VARCHAR" property="xiaohashuId" />
+    <result column="xiaohongshu_id" jdbcType="VARCHAR" property="xiaohongshuId" />
     <result column="password" jdbcType="VARCHAR" property="password" />
     <result column="nickname" jdbcType="VARCHAR" property="nickname" />
     <result column="avatar" jdbcType="VARCHAR" property="avatar" />
@@ -18,7 +18,7 @@
     <result column="is_deleted" jdbcType="BIT" property="isDeleted" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, xiaohashu_id, `password`, nickname, avatar, birthday, background_img, phone, 
+    id, xiaohongshu_id, `password`, nickname, avatar, birthday, background_img, phone, 
     sex, `status`, introduction, create_time, update_time, is_deleted
   </sql>
   <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
@@ -43,12 +43,12 @@
     where id = #{id,jdbcType=BIGINT}
   </delete>
   <insert id="insert" parameterType="com.kaiming.xiaohongshu.user.biz.domain.dataobject.UserDO">
-    insert into t_user (id, xiaohashu_id, `password`, 
+    insert into t_user (id, xiaohongshu_id, `password`, 
       nickname, avatar, birthday, 
       background_img, phone, sex, 
       `status`, introduction, create_time, 
       update_time, is_deleted)
-    values (#{id,jdbcType=BIGINT}, #{xiaohashuId,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR}, 
+    values (#{id,jdbcType=BIGINT}, #{xiaohongshuId,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR}, 
       #{nickname,jdbcType=VARCHAR}, #{avatar,jdbcType=VARCHAR}, #{birthday,jdbcType=DATE}, 
       #{backgroundImg,jdbcType=VARCHAR}, #{phone,jdbcType=VARCHAR}, #{sex,jdbcType=TINYINT}, 
       #{status,jdbcType=TINYINT}, #{introduction,jdbcType=VARCHAR}, #{createTime,jdbcType=TIMESTAMP}, 
@@ -60,8 +60,8 @@
       <if test="id != null">
         id,
       </if>
-      <if test="xiaohashuId != null">
-        xiaohashu_id,
+      <if test="xiaohongshuId != null">
+        xiaohongshu_id,
       </if>
       <if test="password != null">
         `password`,
@@ -104,8 +104,8 @@
       <if test="id != null">
         #{id,jdbcType=BIGINT},
       </if>
-      <if test="xiaohashuId != null">
-        #{xiaohashuId,jdbcType=VARCHAR},
+      <if test="xiaohongshuId != null">
+        #{xiaohongshuId,jdbcType=VARCHAR},
       </if>
       <if test="password != null">
         #{password,jdbcType=VARCHAR},
@@ -148,8 +148,8 @@
   <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.user.biz.domain.dataobject.UserDO">
     update t_user
     <set>
-      <if test="xiaohashuId != null">
-        xiaohashu_id = #{xiaohashuId,jdbcType=VARCHAR},
+      <if test="xiaohongshuId != null">
+        xiaohongshu_id = #{xiaohongshuId,jdbcType=VARCHAR},
       </if>
       <if test="password != null">
         `password` = #{password,jdbcType=VARCHAR},
@@ -192,7 +192,7 @@
   </update>
   <update id="updateByPrimaryKey" parameterType="com.kaiming.xiaohongshu.user.biz.domain.dataobject.UserDO">
     update t_user
-    set xiaohashu_id = #{xiaohashuId,jdbcType=VARCHAR},
+    set xiaohongshu_id = #{xiaohongshuId,jdbcType=VARCHAR},
       `password` = #{password,jdbcType=VARCHAR},
       nickname = #{nickname,jdbcType=VARCHAR},
       avatar = #{avatar,jdbcType=VARCHAR},

@@ -1,7 +1,6 @@
 package com.kaiming.xiaohongshu.search.service;
 
 import com.kaiming.framework.common.response.PageResponse;
-import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.search.model.vo.SearchUserReqVO;
 import com.kaiming.xiaohongshu.search.model.vo.SearchUserRespVO;
 
@@ -14,7 +13,7 @@ import com.kaiming.xiaohongshu.search.model.vo.SearchUserRespVO;
  * @Create 2025/7/16 12:31
  * @Version 1.0
  */
-public interface SearchService {
+public interface UserService {
 
     /**
      * 搜索用户

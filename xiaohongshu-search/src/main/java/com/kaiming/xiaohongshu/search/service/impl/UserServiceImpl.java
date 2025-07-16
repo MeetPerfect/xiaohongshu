@@ -3,12 +3,11 @@ package com.kaiming.xiaohongshu.search.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.google.common.collect.Lists;
 import com.kaiming.framework.common.response.PageResponse;
-import com.kaiming.framework.common.response.Response;
 import com.kaiming.framework.common.util.NumberUtils;
 import com.kaiming.xiaohongshu.search.index.UserIndex;
 import com.kaiming.xiaohongshu.search.model.vo.SearchUserReqVO;
 import com.kaiming.xiaohongshu.search.model.vo.SearchUserRespVO;
-import com.kaiming.xiaohongshu.search.service.SearchService;
+import com.kaiming.xiaohongshu.search.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.search.SearchRequest;
@@ -40,7 +39,7 @@ import java.util.Map;
  */
 @Service
 @Slf4j
-public class SearchServiceImpl implements SearchService {
+public class UserServiceImpl implements UserService {
 
     @Resource
     private RestHighLevelClient restHighLevelClient;

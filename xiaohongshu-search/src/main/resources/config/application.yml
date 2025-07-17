@@ -4,3 +4,7 @@ server:
 spring:
   profiles:
     active: dev
+
+mybatis:
+  # MyBatis xml 配置文件路径
+  mapper-locations: classpath:/mapper/**/*.xml   

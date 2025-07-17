@@ -20,5 +20,12 @@ public interface SelectMapper {
      * @param noteId
      * @return
      */
-    List<Map<String, Object>> selectEsNoteIndexData(@Param("noteId") Long noteId);
+    List<Map<String, Object>> selectEsNoteIndexData(@Param("noteId") Long noteId, @Param("userId") Long userId);
+
+    /**
+     * 查询用户文档所需的全字段数据
+     * @param userId
+     * @return
+     */
+    List<Map<String, Object>> selectEsUserIndexData(@Param("userId") Long userId);
 }

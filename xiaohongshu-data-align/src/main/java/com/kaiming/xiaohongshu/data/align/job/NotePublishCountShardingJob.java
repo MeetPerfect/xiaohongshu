@@ -6,6 +6,7 @@ import com.kaiming.xiaohongshu.data.align.constant.TableConstants;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.DeleteMapper;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.SelectMapper;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.UpdateMapper;
+import com.kaiming.xiaohongshu.data.align.rpc.SearchRpcService;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import jakarta.annotation.Resource;
@@ -38,7 +39,8 @@ public class NotePublishCountShardingJob {
     private DeleteMapper deleteMapper;
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
-
+    @Resource
+    private SearchRpcService searchRpcService;
     /**
      * 分片广播任务
      */
@@ -92,7 +94,8 @@ public class NotePublishCountShardingJob {
                         redisTemplate.opsForHash().put(redisKey, RedisKeyConstants.FIELD_NOTE_TOTAL, noteTotal);
                     }
                 }
-
+                // 远程调用 Rpc, 调用搜索服务, 重建文档
+                searchRpcService.rebuildUserDocument(userId);
             });
 
             // 4. 批量物理删除这一批次记录

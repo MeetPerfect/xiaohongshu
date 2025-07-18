@@ -6,6 +6,7 @@ import com.kaiming.xiaohongshu.data.align.constant.TableConstants;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.DeleteMapper;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.SelectMapper;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.UpdateMapper;
+import com.kaiming.xiaohongshu.data.align.rpc.SearchRpcService;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import jakarta.annotation.Resource;
@@ -38,6 +39,8 @@ public class NoteLikeCountShardingXxlJob {
     private RedisTemplate<String, Object> redisTemplate;
     @Resource
     private DeleteMapper deleteMapper;
+    @Resource
+    private SearchRpcService searchRpcService;
 
     @XxlJob("noteLikeCountShardingJobHandler")
     public void noteLikeCountShardingJobHandler() throws Exception {
@@ -86,6 +89,8 @@ public class NoteLikeCountShardingXxlJob {
                         redisTemplate.opsForHash().put(redisKey, RedisKeyConstants.FIELD_LIKE_TOTAL, likeTotal);
                     }
                 }
+                // 远程调用 Rpc, 调用搜索服务, 重建文档
+                searchRpcService.rebuildNoteDocument(noteId);
             });
             // 4. 批量物理删除这一批次记录
             deleteMapper.batchDeleteDataAlignNoteLikeCountTempTable(tableNameSuffix, noteIds);

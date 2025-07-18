@@ -5,6 +5,7 @@ import com.kaiming.xiaohongshu.data.align.constant.TableConstants;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.DeleteMapper;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.SelectMapper;
 import com.kaiming.xiaohongshu.data.align.domain.mapper.UpdateMapper;
+import com.kaiming.xiaohongshu.data.align.rpc.SearchRpcService;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import jakarta.annotation.Resource;
@@ -37,7 +38,9 @@ public class FansCountShardingJob {
     private RedisTemplate<Object, Object> redisTemplate;
     @Resource
     private DeleteMapper deleteMapper;
-
+    @Resource
+    private SearchRpcService searchRpcService;
+    
     @XxlJob("fansCountShardingJobHandler")
     public void fansCountShardingJobHandler() {
         // 获取分片参数
@@ -80,6 +83,8 @@ public class FansCountShardingJob {
                         redisTemplate.opsForHash().put(redisKey, RedisKeyConstants.FIELD_FANS_TOTAL, fansTotal);
                     }
                 }
+                // 远程调用 Rpc, 调用搜索服务, 重建文档
+                searchRpcService.rebuildUserDocument(userId);
             });
             
             deleteMapper.batchDeleteDataAlignFansCountTempTable(tableNameSuffix, userIds);

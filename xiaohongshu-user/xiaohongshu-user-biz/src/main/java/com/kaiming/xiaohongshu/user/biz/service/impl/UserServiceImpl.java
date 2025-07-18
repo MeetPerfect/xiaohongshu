@@ -120,7 +120,7 @@ public class UserServiceImpl implements UserService {
         String xiaohashuId = updateUserInfoReqVO.getXiaohongshuId();
         if (StringUtils.isNotBlank(xiaohashuId)) {
             Preconditions.checkArgument(ParamUtils.checkXiaohongshuId(xiaohashuId), ResponseCodeEnum.XIAOHONGSHU_ID_VALID_FAIL.getErrorMessage());
-            userDO.setXiaohashuId(xiaohashuId);
+            userDO.setXiaohongshuId(xiaohashuId);
             needUpdate = true;
         }
 
@@ -194,7 +194,7 @@ public class UserServiceImpl implements UserService {
         UserDO userDO = UserDO.builder()
                 .id(userId)
                 .phone(phone)
-                .xiaohashuId(xiaohongshuId)
+                .xiaohongshuId(xiaohongshuId)
                 .nickname("小红书" + xiaohongshuId)
                 .status(StatusEnum.ENABLE.getValue())
                 .createTime(LocalDateTime.now())

@@ -1,0 +1,26 @@
+package com.kaiming.xiaohongshu.search.dto;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * ClassName: RebuildNoteDocumentReqDTO
+ * Package: com.kaiming.xiaohongshu.search.api.dto
+ * Description:
+ *
+ * @Auther gongkaiming
+ * @Create 2025/7/17 21:13
+ * @Version 1.0
+ */
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class RebuildNoteDocumentReqDTO {
+
+    @NotNull(message = "笔记 ID 不能为空")
+    private Long id;
+}

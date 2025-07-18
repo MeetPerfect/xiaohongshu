@@ -3,6 +3,7 @@ package com.kaiming.xiaohongshu.data.align;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
  * ClassName: XiaohongshuDataAlignApplication
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @MapperScan("com.kaiming.xiaohongshu.data.align.domain.mapper")
+@EnableFeignClients(basePackages = "com.kaiming.xiaohongshu")
 public class XiaohongshuDataAlignApplication {
 
     

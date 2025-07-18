@@ -21,6 +21,16 @@
             <groupId>com.kaiming</groupId>
             <artifactId>xiaohongshu-kv-api</artifactId>
         </dependency>
+        <!-- 业务接口日志组件 -->
+        <dependency>
+            <groupId>com.kaiming</groupId>
+            <artifactId>xiaohongshu-spring-boot-starter-biz-operationlog</artifactId>
+        </dependency>
+        <!-- Jackson 组件 -->
+        <dependency>
+            <groupId>com.kaiming</groupId>
+            <artifactId>xiaohongshu-spring-boot-starter-jackson</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -51,6 +61,14 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

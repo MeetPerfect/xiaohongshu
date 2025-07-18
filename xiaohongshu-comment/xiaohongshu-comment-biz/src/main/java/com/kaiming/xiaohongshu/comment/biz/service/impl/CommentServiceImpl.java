@@ -7,6 +7,7 @@ import com.kaiming.framework.common.util.JsonUtils;
 import com.kaiming.xiaohongshu.comment.biz.constant.MQConstants;
 import com.kaiming.xiaohongshu.comment.biz.model.dto.PublishCommentMqDTO;
 import com.kaiming.xiaohongshu.comment.biz.model.vo.PublishCommentReqVO;
+import com.kaiming.xiaohongshu.comment.biz.retry.SendMqRetryHelper;
 import com.kaiming.xiaohongshu.comment.biz.service.CommentService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,8 @@ public class CommentServiceImpl implements CommentService {
 
     @Resource
     private RocketMQTemplate  rocketMQTemplate;
+    @Resource
+    private SendMqRetryHelper sendMqRetryHelper;
     /**
      * 发布评论
      * @param publishCommentReqVO
@@ -65,21 +68,7 @@ public class CommentServiceImpl implements CommentService {
                 .createTime(LocalDateTime.now())
                 .creatorId(creatorId)
                 .build();
-        // 构建消息体对象,并将 DTO 转成 Json 字符串设置到消息体中
-        Message<String> message = MessageBuilder.withPayload(JsonUtils.toJsonString(publishCommentMqDTO)).build();
-        
-        // 异步发送, 提升接口响应速度
-        rocketMQTemplate.asyncSend(MQConstants.TOPIC_PUBLISH_COMMENT, message, new SendCallback() {
-            @Override
-            public void onSuccess(SendResult sendResult) {
-                log.info("==> 【评论发布】MQ 发送成功，SendResult: {}", sendResult);
-            }
-
-            @Override
-            public void onException(Throwable throwable) {
-                log.error("==> 【评论发布】MQ 发送异常: ", throwable);
-            }
-        });
+        sendMqRetryHelper.send(MQConstants.TOPIC_PUBLISH_COMMENT, JsonUtils.toJsonString(publishCommentMqDTO));
         return Response.success();
     }
 }

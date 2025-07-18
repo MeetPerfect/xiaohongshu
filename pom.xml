@@ -17,21 +17,28 @@
         <module>xiaohongshu-framework</module>
         <!--认证服务-->
         <module>xiaohongshu-auth</module>
-        <!-- Gateway 网关服务 -->
+        <!--Gateway 网关服务 -->
         <module>xiaohongshu-gateway</module>
-        <!--        对象存储服务-->
+        <!--对象存储服务-->
         <module>xiaohongshu-oss</module>
-        <!--        用户服务-->
+        <!--用户服务-->
         <module>xiaohongshu-user</module>
         <!-- KV 键值存储服务 -->
         <module>xiaohongshu-kv</module>
         <!--分布式Id-->
         <module>xiaohongshu-distributed-id-generator</module>
+        <!--笔记服务-->
         <module>xiaohongshu-note</module>
+        <!--用户关系服务-->
         <module>xiaohonghsu-user-relation</module>
+        <!--计数服务-->
         <module>xiaohongshu-count</module>
+        <!--数据对齐服务-->
         <module>xiaohongshu-data-align</module>
+        <!--搜索服务-->
         <module>xiaohongshu-search</module>
+        <!--笔记评论-->
+        <module>xiaohongshu-comment</module>
 
     </modules>
 

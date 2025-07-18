@@ -29,6 +29,12 @@ spring:
             - Path=/relation/**
           filters:
             - StripPrefix=1
+        - id: comment
+          uri: lb://xiaohongshu-comment
+          predicates:
+            - Path=/comment/**
+          filters:
+            - StripPrefix=1
   data:
     redis:
       database: 0

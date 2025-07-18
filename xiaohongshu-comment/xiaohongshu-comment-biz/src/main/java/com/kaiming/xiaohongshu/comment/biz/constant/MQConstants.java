@@ -1,0 +1,19 @@
+package com.kaiming.xiaohongshu.comment.biz.constant;
+
+/**
+ * ClassName: MQConstants
+ * Package: com.kaiming.xiaohongshu.comment.biz.constant
+ * Description:
+ *
+ * @Auther gongkaiming
+ * @Create 2025/7/18 14:47
+ * @Version 1.0
+ */
+
+public interface MQConstants {
+
+    /**
+     * Topic: 评论发布
+     */
+    String TOPIC_PUBLISH_COMMENT = "PublishCommentTopic";
+}

@@ -22,8 +22,15 @@ import java.time.LocalDateTime;
 @Builder
 public class PublishCommentMqDTO {
 
-
+    /**
+     * 笔记 Id
+     */
     private Long noteId;
+
+    /**
+     * 评论 Id
+     */
+    private Long commentId;
 
     /**
      * 评论内容
@@ -36,7 +43,7 @@ public class PublishCommentMqDTO {
     private String imageUrl;
 
     /**
-     * 回复的哪个评论（评论 ID）
+     * 回复的哪个评论（评论 Id）
      */
     private Long replyCommentId;
 
@@ -46,7 +53,7 @@ public class PublishCommentMqDTO {
     private LocalDateTime createTime;
 
     /**
-     * 发布者 ID
+     * 发布者 Id
      */
     private Long creatorId;
 }

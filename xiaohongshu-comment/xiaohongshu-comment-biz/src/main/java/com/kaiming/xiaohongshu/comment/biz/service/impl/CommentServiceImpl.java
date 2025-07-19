@@ -8,14 +8,11 @@ import com.kaiming.xiaohongshu.comment.biz.constant.MQConstants;
 import com.kaiming.xiaohongshu.comment.biz.model.dto.PublishCommentMqDTO;
 import com.kaiming.xiaohongshu.comment.biz.model.vo.PublishCommentReqVO;
 import com.kaiming.xiaohongshu.comment.biz.retry.SendMqRetryHelper;
+import com.kaiming.xiaohongshu.comment.biz.rpc.DistributedIdGeneratorRpcService;
 import com.kaiming.xiaohongshu.comment.biz.service.CommentService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.client.producer.SendCallback;
-import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 
 
@@ -37,9 +34,9 @@ import java.time.LocalDateTime;
 public class CommentServiceImpl implements CommentService {
 
     @Resource
-    private RocketMQTemplate  rocketMQTemplate;
-    @Resource
     private SendMqRetryHelper sendMqRetryHelper;
+    @Resource
+    private DistributedIdGeneratorRpcService distributedIdGeneratorRpcService;
     /**
      * 发布评论
      * @param publishCommentReqVO
@@ -56,12 +53,14 @@ public class CommentServiceImpl implements CommentService {
         Preconditions.checkArgument(StringUtils.isNotBlank(content) || StringUtils.isNotBlank(imageUrl),
                 "评论正文和图片不能同时为空");
         
-        // 当前登录用户Id
+        // 当前登录用户Id, 发布者Id
         Long creatorId = LoginUserContextHolder.getUserId();
-        
+        // RPC: 调用分布式 ID 生成服务, 评论内容Id
+        String commentId = distributedIdGeneratorRpcService.generateCommentId();
         // 发布 MQ 消息
         PublishCommentMqDTO publishCommentMqDTO = PublishCommentMqDTO.builder()
                 .noteId(publishCommentReqVO.getNoteId())
+                .commentId(Long.valueOf(commentId))
                 .content(content)
                 .imageUrl(imageUrl)
                 .replyCommentId(publishCommentReqVO.getReplyCommentId())

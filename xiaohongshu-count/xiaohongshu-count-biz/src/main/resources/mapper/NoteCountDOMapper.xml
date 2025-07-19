@@ -74,6 +74,11 @@
       values (#{noteId}, #{count})
       on duplicate key update collect_total = collect_total + (#{count});
     </insert>
+    <insert id="insertOrUpdateCommentTotalByNoteId" parameterType="map">
+      insert into t_note_count (note_id, comment_total)
+      values (#{noteId}, #{count})
+      on duplicate key update comment_total = comment_total + (#{count});
+    </insert>
     <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.count.biz.domain.dataobject.NoteCountDO">
     update t_note_count
     <set>

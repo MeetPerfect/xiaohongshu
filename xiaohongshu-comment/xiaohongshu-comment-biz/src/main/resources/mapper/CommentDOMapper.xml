@@ -17,6 +17,8 @@
         <result column="is_top" jdbcType="TINYINT" property="isTop"/>
         <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
         <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="child_comment_total" jdbcType="BIGINT" property="childCommentTotal"/>
+        <result column="first_reply_comment_id" jdbcType="BIGINT" property="firstReplyCommentId" />
     </resultMap>
     <sql id="Base_Column_List">
         id
@@ -30,13 +32,16 @@
         where id = #{id,jdbcType=BIGINT}
     </select>
     <select id="selectByCommentIds" resultMap="BaseResultMap" parameterType="list">
-        select id level, parent_id, user_id
+        select id, level, parent_id, user_id, child_comment_total, like_total, first_reply_comment_id
         from t_comment
         where id
-            in
+        in
         <foreach collection="commentIds" open="(" separator="," close=")" item="commentId">
             #{commentId}
         </foreach>
+    </select>
+    <select id="selectEarliestByParentId" resultMap="BaseResultMap" parameterType="map">
+        select id from t_comment where parent_id = #{parentId} and level = 2 order by create_time asc limit 1
     </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
         delete
@@ -163,7 +168,8 @@
         <foreach collection="comments" item="comment" separator=",">
             (#{comment.id}, #{comment.noteId}, #{comment.userId}, #{comment.contentUuid}, #{comment.isContentEmpty}
             , #{comment.imageUrl}, #{comment.level}, #{comment.replyTotal}, #{comment.likeTotal}, #{comment.parentId}
-            , #{comment.replyCommentId}, #{comment.replyUserId}, #{comment.isTop}, #{comment.createTime}, #{comment.updateTime})
+            , #{comment.replyCommentId}, #{comment.replyUserId}, #{comment.isTop}, #{comment.createTime},
+            #{comment.updateTime})
         </foreach>
     </insert>
     <update id="updateByPrimaryKeySelective"
@@ -232,5 +238,22 @@
             create_time      = #{createTime,jdbcType=TIMESTAMP},
             update_time      = #{updateTime,jdbcType=TIMESTAMP}
         where id = #{id,jdbcType=BIGINT}
+    </update>
+    <update id="batchUpdateHeatByCommentIds" parameterType="map">
+        UPDATE t_comment
+        SET heat = CASE id
+        <foreach collection="commentHeatBOS" item="bo" separator="">
+            WHEN #{bo.id} THEN #{bo.heat}
+        </foreach>
+        ELSE heat END
+        WHERE id IN
+        <foreach collection="commentIds" item="commentId" open="(" close=")" separator=",">
+            #{commentId}
+        </foreach>
+    </update>
+    <update id="updateFirstReplyCommentIdByPrimaryKey" parameterType="map">
+        update t_comment
+        set first_reply_comment_id = #{firstReplyCommentId}
+        where id = #{id}
     </update>
 </mapper>

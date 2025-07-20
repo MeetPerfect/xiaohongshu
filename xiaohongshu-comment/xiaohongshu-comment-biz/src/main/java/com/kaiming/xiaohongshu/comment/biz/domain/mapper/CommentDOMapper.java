@@ -2,6 +2,7 @@ package com.kaiming.xiaohongshu.comment.biz.domain.mapper;
 
 import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentDO;
 import com.kaiming.xiaohongshu.comment.biz.model.bo.CommentBO;
+import com.kaiming.xiaohongshu.comment.biz.model.bo.CommentHeatBO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -32,4 +33,29 @@ public interface CommentDOMapper {
      * @return
      */
     int batchInsert(@Param("comments") List<CommentBO> comments);
+
+    /**
+     * 批量更新热度值
+     * @param commentIds
+     * @param commentHeatBOS
+     * @return
+     */
+    int batchUpdateHeatByCommentIds(@Param("commentIds") List<Long> commentIds,
+                                    @Param("commentHeatBOS") List<CommentHeatBO> commentHeatBOS);
+
+    /**
+     * 查询一级评论下回复最早的评论
+     * @param parentId
+     * @return
+     */
+    CommentDO selectEarliestByParentId(Long parentId);
+
+    /**
+     * 更新一级评论的 firstReplyCommentId
+     * @param firstReplyCommentId
+     * @param id
+     * @return
+     */
+    int updateFirstReplyCommentIdByPrimaryKey(@Param("firstReplyCommentId") Long firstReplyCommentId, 
+                                              @Param("id") Long id);
 }

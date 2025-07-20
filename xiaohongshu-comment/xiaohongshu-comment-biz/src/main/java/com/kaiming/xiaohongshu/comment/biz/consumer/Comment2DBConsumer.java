@@ -154,7 +154,7 @@ public class Comment2DBConsumer {
                             commentBO.setLevel(CommentLevelEnum.TWO.getCode());
                             commentBO.setReplyCommentId(publishCommentMqDTO.getReplyCommentId());
                             // 父评论 ID
-                            commentBO.setParentId(replyCommentId);
+                            commentBO.setParentId(replyCommentDO.getId());
                             if (Objects.equals(replyCommentDO.getLevel(), CommentLevelEnum.TWO.getCode())) {    // 如果回复的评论属于二级评论
                                 commentBO.setParentId(replyCommentDO.getParentId());
                             }

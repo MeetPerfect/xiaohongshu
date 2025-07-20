@@ -1,7 +1,10 @@
 package com.kaiming.xiaohongshu.comment.biz.controller;
 
 import com.kaiming.framework.biz.operationlog.aspect.ApiOperationLog;
+import com.kaiming.framework.common.response.PageResponse;
 import com.kaiming.framework.common.response.Response;
+import com.kaiming.xiaohongshu.comment.biz.model.vo.FindCommentItemRespVO;
+import com.kaiming.xiaohongshu.comment.biz.model.vo.FindCommentPageListReqVO;
 import com.kaiming.xiaohongshu.comment.biz.model.vo.PublishCommentReqVO;
 import com.kaiming.xiaohongshu.comment.biz.service.CommentService;
 import jakarta.annotation.Resource;
@@ -32,5 +35,11 @@ public class CommentController {
     @ApiOperationLog(description = "发布评论")
     public Response<?> publishComment(@RequestBody PublishCommentReqVO publishCommentReqVO) {
         return commentService.publishComment(publishCommentReqVO);
+    }
+    
+    @PostMapping("/list")
+    @ApiOperationLog(description = "分页查询")
+    public PageResponse<FindCommentItemRespVO> findCommentPageList(@RequestBody FindCommentPageListReqVO findCommentPageListReqVO) {
+        return commentService.findCommentPageList(findCommentPageListReqVO);
     }
 }

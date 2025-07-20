@@ -1,15 +1,16 @@
 package com.kaiming.xiaohongshu.kv.api;
 
+import com.kaiming.framework.common.response.PageResponse;
 import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.kv.constant.ApiConstants;
-import com.kaiming.xiaohongshu.kv.dto.req.AddNoteContentReqDTO;
-import com.kaiming.xiaohongshu.kv.dto.req.BatchAddCommentContentReqDTO;
-import com.kaiming.xiaohongshu.kv.dto.req.DeleteNoteContentReqDTO;
-import com.kaiming.xiaohongshu.kv.dto.req.FindNoteContentReqDTO;
+import com.kaiming.xiaohongshu.kv.dto.req.*;
+import com.kaiming.xiaohongshu.kv.dto.resp.FindCommentContentRespDTO;
 import com.kaiming.xiaohongshu.kv.dto.resp.FindNoteContentRespDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+
+import java.util.List;
 
 /**
  * ClassName: KeyValueFeignApi
@@ -36,4 +37,7 @@ public interface KeyValueFeignApi {
     
     @PostMapping(PREFIX + "/comment/content/batchAdd")
     Response<?> batchAddCommentContent(@RequestBody BatchAddCommentContentReqDTO batchAddCommentContentReqDTO);
+    
+    @PostMapping(PREFIX + "/comment/content/batchFind")
+    Response<List<FindCommentContentRespDTO>> batchFindCommentContent(@RequestBody BatchFindCommentContentReqDTO  batchFindCommentContentReqDTO);
 }

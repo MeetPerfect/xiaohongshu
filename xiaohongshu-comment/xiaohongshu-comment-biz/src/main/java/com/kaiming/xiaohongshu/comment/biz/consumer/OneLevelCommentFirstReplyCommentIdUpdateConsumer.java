@@ -6,7 +6,7 @@ import com.github.phantomthief.collection.BufferTrigger;
 import com.google.common.collect.Lists;
 import com.kaiming.framework.common.util.JsonUtils;
 import com.kaiming.xiaohongshu.comment.biz.constant.MQConstants;
-import com.kaiming.xiaohongshu.comment.biz.constant.RedisKeyConstant;
+import com.kaiming.xiaohongshu.comment.biz.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentDO;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.enums.CommentLevelEnum;
@@ -86,7 +86,7 @@ public class OneLevelCommentFirstReplyCommentIdUpdateConsumer implements RocketM
 
         // 构建 Redis key
         List<String> keys = parentIds.stream()
-                .map(RedisKeyConstant::buildHaveFirstReplyCommentKey).toList();
+                .map(RedisKeyConstants::buildHaveFirstReplyCommentKey).toList();
 
         // 批量查询 Redis
         List<Object> values = redisTemplate.opsForValue().multiGet(keys);
@@ -152,7 +152,7 @@ public class OneLevelCommentFirstReplyCommentIdUpdateConsumer implements RocketM
         redisTemplate.executePipelined((RedisCallback<?>) (connection) ->{
             needSyncCommentIds.forEach(needSyncCommentId -> {
                 // 构建 RedisKey
-                String key = RedisKeyConstant.buildHaveFirstReplyCommentKey(needSyncCommentId);
+                String key = RedisKeyConstants.buildHaveFirstReplyCommentKey(needSyncCommentId);
                 
                 valueOperations.set(key, 1, RandomUtil.randomInt(5 * 60 * 60), TimeUnit.SECONDS );
             });

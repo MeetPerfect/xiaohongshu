@@ -100,7 +100,7 @@ public class CommentContentServiceImpl implements CommentContentService {
         if (CollUtil.isNotEmpty(commentContentDOS)) {
             findCommentContentRspDTOS = commentContentDOS.stream()
                     .map(commentContentDO -> FindCommentContentRespDTO.builder()
-                            .content(String.valueOf(commentContentDO.getPrimaryKey().getContentId()))
+                            .contentId(String.valueOf(commentContentDO.getPrimaryKey().getContentId()))
                             .content(commentContentDO.getContent())
                             .build())
                     .toList();

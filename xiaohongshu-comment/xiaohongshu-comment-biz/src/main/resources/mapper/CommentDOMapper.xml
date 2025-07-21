@@ -91,6 +91,15 @@
         where parent_id = #{parentId} and level = 2 order by id asc
             limit #{offset}, #{pageSize}
     </select>
+    <select id="selectCommentCountByIds" resultMap="BaseResultMap" parameterType="map">
+        select
+        id, child_comment_total, like_total, level
+        from t_comment
+        where id in
+        <foreach collection="commentIds" open="(" separator="," close=")" item="commentId">
+            #{commentId}
+        </foreach>
+    </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
         delete
         from t_comment

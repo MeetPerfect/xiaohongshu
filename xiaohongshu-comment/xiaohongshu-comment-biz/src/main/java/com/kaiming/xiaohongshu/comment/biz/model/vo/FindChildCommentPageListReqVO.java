@@ -1,11 +1,29 @@
 package com.kaiming.xiaohongshu.comment.biz.model.vo;
 
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
-* ClassName: FindChildCommentPageListReqVO
-* Package: com.kaiming.xiaohongshu.comment.biz.model.vo
-* Description:
-* @Auther gongkaiming
-* @Create 2025/7/21 12:32
-* @Version 1.0
-*/    public class FindChildCommentPageListReqVO {
+ * ClassName: FindChildCommentPageListReqVO
+ * Package: com.kaiming.xiaohongshu.comment.biz.model.vo
+ * Description:
+ *
+ * @Auther gongkaiming
+ * @Create 2025/7/21 12:32
+ * @Version 1.0
+ */
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class FindChildCommentPageListReqVO {
+
+    @NotNull(message = "父评论 ID 不能为空")
+    private Long parentCommentId;
+
+    @NotNull(message = "页码不能为空")
+    private Integer pageNo = 1;
 }

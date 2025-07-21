@@ -2,9 +2,7 @@ package com.kaiming.xiaohongshu.comment.biz.service;
 
 import com.kaiming.framework.common.response.PageResponse;
 import com.kaiming.framework.common.response.Response;
-import com.kaiming.xiaohongshu.comment.biz.model.vo.FindCommentItemRespVO;
-import com.kaiming.xiaohongshu.comment.biz.model.vo.FindCommentPageListReqVO;
-import com.kaiming.xiaohongshu.comment.biz.model.vo.PublishCommentReqVO;
+import com.kaiming.xiaohongshu.comment.biz.model.vo.*;
 
 /**
  * ClassName: CommentService
@@ -30,4 +28,11 @@ public interface CommentService {
      * @return
      */
     PageResponse<FindCommentItemRespVO> findCommentPageList(FindCommentPageListReqVO findCommentPageListReqVO);
+
+    /**
+     * 二级评论内容分页查询
+     * @param findChildCommentPageListReqVO
+     * @return
+     */
+    PageResponse<FindChildCommentItemRespVO> findChildCommentPageList(FindChildCommentPageListReqVO findChildCommentPageListReqVO);
 }

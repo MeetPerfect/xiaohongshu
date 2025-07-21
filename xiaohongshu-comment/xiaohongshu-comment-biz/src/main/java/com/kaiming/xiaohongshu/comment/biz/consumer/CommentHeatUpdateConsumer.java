@@ -51,8 +51,8 @@ public class CommentHeatUpdateConsumer implements RocketMQListener<String> {
     
     private BufferTrigger<String> bufferTrigger = BufferTrigger.<String>batchBlocking()
             .bufferSize(50000)
-            .batchSize(1000)
-            .linger(Duration.ofMillis(1))
+            .batchSize(300)
+            .linger(Duration.ofMillis(2))
             .setConsumerEx(this::consumeMessage)
             .build();
 

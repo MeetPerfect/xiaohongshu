@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.kaiming.framework.biz.context.holder.LoginUserContextHolder;
 import com.kaiming.framework.common.constant.DateConstants;
 import com.kaiming.framework.common.exception.BizException;
@@ -21,9 +22,7 @@ import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.NoteCountDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.enums.ResponseCodeEnum;
 import com.kaiming.xiaohongshu.comment.biz.model.dto.PublishCommentMqDTO;
-import com.kaiming.xiaohongshu.comment.biz.model.vo.FindCommentItemRespVO;
-import com.kaiming.xiaohongshu.comment.biz.model.vo.FindCommentPageListReqVO;
-import com.kaiming.xiaohongshu.comment.biz.model.vo.PublishCommentReqVO;
+import com.kaiming.xiaohongshu.comment.biz.model.vo.*;
 import com.kaiming.xiaohongshu.comment.biz.retry.SendMqRetryHelper;
 import com.kaiming.xiaohongshu.comment.biz.rpc.DistributedIdGeneratorRpcService;
 import com.kaiming.xiaohongshu.comment.biz.rpc.KeyValueRpcService;
@@ -79,12 +78,13 @@ public class CommentServiceImpl implements CommentService {
     private RedisTemplate<String, Object> redisTemplate;
     @Resource(name = "taskExecutor")
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
-    
+
     private static final Cache<Long, String> LOCAL_CACHE = Caffeine.newBuilder()
             .initialCapacity(10000) // 设置初始容量为 10000 个条目
             .maximumSize(10000)     // 设置缓存的最大容量为 10000 个条目
             .expireAfterWrite(1, TimeUnit.HOURS)    // 设置缓存条目在写入后 1 小时过期
             .build();
+
     /**
      * 发布评论
      *
@@ -187,13 +187,13 @@ public class CommentServiceImpl implements CommentService {
                 // 先查询本地缓存
                 // 新建一个集合，用于存储本地缓存中不存在的评论 ID
                 List<Long> localCacheExpiredCommentIds = Lists.newArrayList();
-                
+
                 // 构建本地缓存的 Key
                 List<Long> localCacheKeys = commentIdList.stream()
                         .map(commentId -> Long.valueOf(commentId.toString()))
                         .toList();
                 // 批量查询本地缓存
-                Map<Long, String> commentIdAndDetailJsonMap  = LOCAL_CACHE.getAll(localCacheKeys, missingKeys -> {
+                Map<Long, String> commentIdAndDetailJsonMap = LOCAL_CACHE.getAll(localCacheKeys, missingKeys -> {
                     // 对于本地缓存中缺失的 key，返回空字符串
                     Map<Long, String> missingData = Maps.newHashMap();
                     missingKeys.forEach(key -> {
@@ -209,8 +209,8 @@ public class CommentServiceImpl implements CommentService {
                 if (localCacheExpiredCommentIds.size() != commentIdList.size()) {
                     // 将本地缓存中的评论详情 Json, 转换为实体类，添加到 VO 返参集合中
                     for (String value : commentIdAndDetailJsonMap.values()) {
-                        if (StringUtils.isBlank(value)) continue ;
-                        FindCommentItemRespVO commentRespVO  = JsonUtils.parseObject(value, FindCommentItemRespVO.class);
+                        if (StringUtils.isBlank(value)) continue;
+                        FindCommentItemRespVO commentRespVO = JsonUtils.parseObject(value, FindCommentItemRespVO.class);
                         commentRespVOS.add(commentRespVO);
                     }
                 }
@@ -251,13 +251,13 @@ public class CommentServiceImpl implements CommentService {
             }
 
             // 按热度值进行降序排列
-            commentRespVOS  = commentRespVOS.stream()
+            commentRespVOS = commentRespVOS.stream()
                     .sorted(Comparator.comparing(FindCommentItemRespVO::getHeat).reversed())
                     .collect(Collectors.toList());
-            
+
             // 异步将评论详情，同步到本地缓存
             syncCommentDetail2LocalCache(commentRespVOS);
-            
+
             return PageResponse.success(commentRespVOS, pageNo, count, pageSize);
 
         }
@@ -273,14 +273,147 @@ public class CommentServiceImpl implements CommentService {
     }
 
     /**
+     * 二级评论内容分页查询
+     *
+     * @param findChildCommentPageListReqVO
+     * @return
+     */
+    @Override
+    public PageResponse<FindChildCommentItemRespVO> findChildCommentPageList(FindChildCommentPageListReqVO findChildCommentPageListReqVO) {
+        // 父评论Id
+        Long parentCommentId = findChildCommentPageListReqVO.getParentCommentId();
+        // 页码
+        Integer pageNo = findChildCommentPageListReqVO.getPageNo();
+
+        // 每页展示的二级评论数 (小红书 APP 中是一次查询 6 条)
+        long pageSize = 6;
+
+        // TODO: 先从缓存中查（后面补充）
+        // 查询一级评论下子评论的总数 (直接查询 t_comment 表的 child_comment_total 字段，提升查询性能, 避免 count(*))
+        Long count = commentDOMapper.selectChildCommentTotalById(parentCommentId);
+
+        // 若该一级评论不存在，或者子评论总数为 0
+        if (Objects.isNull(count) || count == 0) {
+            return PageResponse.success(null, pageNo, 0);
+        }
+        
+        // 分页返回参数
+        List<FindChildCommentItemRespVO> childCommentRespVOS = Lists.newArrayList();
+
+        // 偏移量
+        long offset = PageResponse.getOffset(pageNo, pageSize) + 1;
+
+        // 分页查询子评论
+        List<CommentDO> childCommentDOS = commentDOMapper.selectChildPageList(parentCommentId, offset, pageSize);
+
+        // 调用 KV 服务需要的输入参数
+        List<FindCommentContentReqDTO> findCommentContentReqDTOS = Lists.newArrayList();
+        // 调用用户服务的入参
+        Set<Long> userIds = Sets.newHashSet();
+
+        // 归属的笔记 ID
+        Long noteId = null;
+
+        for (CommentDO childCommentDO : childCommentDOS) {
+            noteId = childCommentDO.getNoteId();
+            // 构建调用 KV 服务批量查询评论内容的入参
+            boolean isContentEmpty = childCommentDO.getIsContentEmpty();
+            if (!isContentEmpty) {
+                FindCommentContentReqDTO findCommentContentReqDTO = FindCommentContentReqDTO.builder()
+                        .contentId(childCommentDO.getContentUuid())
+                        .yearMonth(DateConstants.DATE_FORMAT_Y_M.format(childCommentDO.getCreateTime()))
+                        .build();
+                findCommentContentReqDTOS.add(findCommentContentReqDTO);
+            }
+            // 构建调用用户服务批量查询用户信息的入参 (包含评论发布者、回复的目标用户)
+            userIds.add(childCommentDO.getUserId());
+
+            Long parentId = childCommentDO.getParentId();
+            Long replyCommentId = childCommentDO.getReplyCommentId();
+            // 若当前评论的 replyCommentId 不等于 parentId，则前端需要展示回复的哪个用户，如  “回复 小红书：”
+
+            if (!Objects.equals(parentId, replyCommentId)) {
+                userIds.add(childCommentDO.getReplyUserId());
+            }
+        }
+        // RPC: 调用 KV 服务，批量获取评论内容
+        List<FindCommentContentRespDTO> findCommentContentRespDTOS =
+                keyValueRpcService.batchFindCommentContent(noteId, findCommentContentReqDTOS);
+
+        // DTO 集合转 Map, 方便后续拼装数据
+        Map<String, String> commentUuidAndContentMap = null;
+        if (CollUtil.isNotEmpty(findCommentContentRespDTOS)) {
+            commentUuidAndContentMap = findCommentContentRespDTOS.stream()
+                    .collect(Collectors.toMap(FindCommentContentRespDTO::getContentId, FindCommentContentRespDTO::getContent));
+        }
+
+        // RPC: 调用用户服务，批量获取用户信息（头像、昵称等）
+        List<FindUserByIdRespDTO> findUserByIdRespDTOS = userRpcService.findByIds(userIds.stream().toList());
+
+        // DTO 集合转 Map, 方便后续拼装数据
+        Map<Long, FindUserByIdRespDTO> userIdAndDTOMap = null;
+        if (CollUtil.isNotEmpty(findUserByIdRespDTOS)) {
+            userIdAndDTOMap = findUserByIdRespDTOS.stream()
+                    .collect(Collectors.toMap(FindUserByIdRespDTO::getId, dto -> dto));
+        }
+
+        // DO 转 VO
+        for (CommentDO childCommentDO : childCommentDOS) {
+            // 构建 VO 实体类
+            Long userId = childCommentDO.getUserId();
+            FindChildCommentItemRespVO childCommentRespVO = FindChildCommentItemRespVO.builder()
+                    .userId(userId)
+                    .commentId(childCommentDO.getId())
+                    .imageUrl(childCommentDO.getImageUrl())
+                    .createTime(DateUtils.formatRelativeTime(childCommentDO.getCreateTime()))
+                    .likeTotal(childCommentDO.getLikeTotal())
+                    .build();
+
+            // 填充用户信息(包括评论发布者、回复的用户)
+            if (CollUtil.isNotEmpty(userIdAndDTOMap)) {
+                FindUserByIdRespDTO findUserByIdRespDTO = userIdAndDTOMap.get(userId);
+                // 评论发布者用户信息(头像、昵称)
+                if (Objects.nonNull(findUserByIdRespDTO)) {
+                    childCommentRespVO.setAvatar(findUserByIdRespDTO.getAvatar());
+                    childCommentRespVO.setNickname(findUserByIdRespDTO.getNickName());
+                }
+                // 评论回复的哪个
+                Long replyCommentId = childCommentDO.getReplyCommentId();
+                Long parentId = childCommentDO.getParentId();
+
+                if (Objects.nonNull(replyCommentId)
+                        && !Objects.equals(replyCommentId, parentId)) {
+                    Long replyUserId = childCommentDO.getReplyUserId();
+                    FindUserByIdRespDTO replyUser = userIdAndDTOMap.get(replyUserId);
+                    childCommentRespVO.setReplyUserName(replyUser.getNickName());
+                    childCommentRespVO.setReplyUserId(replyUser.getId());
+                }
+            }
+
+            // 评论内容
+            if (CollUtil.isNotEmpty(commentUuidAndContentMap)) {
+                String contentUuid = childCommentDO.getContentUuid();
+                if (StringUtils.isNotBlank(contentUuid)) {
+                    childCommentRespVO.setContent(commentUuidAndContentMap.get(contentUuid));
+                }
+            }
+
+            childCommentRespVOS.add(childCommentRespVO);
+        }
+
+        return PageResponse.success(childCommentRespVOS, pageNo, count, pageSize);
+    }
+
+    /**
      * 同步评论详情到本地缓存中
+     *
      * @param commentRespVOS
      */
     private void syncCommentDetail2LocalCache(List<FindCommentItemRespVO> commentRespVOS) {
         // 开启一个异步线程
         threadPoolTaskExecutor.execute(() -> {
             // 构建缓存所需的键值
-            Map<Long, String> localCacheData  = Maps.newHashMap();
+            Map<Long, String> localCacheData = Maps.newHashMap();
             commentRespVOS.forEach(commentRespVO -> {
                 // 评论 Id
                 Long commentId = commentRespVO.getCommentId();

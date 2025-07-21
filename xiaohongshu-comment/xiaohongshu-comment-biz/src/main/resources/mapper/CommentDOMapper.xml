@@ -36,7 +36,7 @@
         select
         id, user_id, content_uuid, is_content_empty, image_url, like_total,
         is_top, create_time, first_reply_comment_id, child_comment_total,
-        level, parent_id, heat
+        level, parent_id, heat, note_id
         from t_comment
         where id in
         <foreach collection="commentIds" open="(" separator="," close=")" item="commentId">

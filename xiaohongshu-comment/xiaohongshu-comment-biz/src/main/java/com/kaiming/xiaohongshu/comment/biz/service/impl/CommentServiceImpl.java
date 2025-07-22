@@ -21,7 +21,10 @@ import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentDO;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.NoteCountDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.enums.CommentLevelEnum;
+import com.kaiming.xiaohongshu.comment.biz.enums.CommentLikeLuaResultEnum;
+import com.kaiming.xiaohongshu.comment.biz.enums.LikeUnlikeCommentTypeEnum;
 import com.kaiming.xiaohongshu.comment.biz.enums.ResponseCodeEnum;
+import com.kaiming.xiaohongshu.comment.biz.model.dto.LikeUnlikeCommentMqDTO;
 import com.kaiming.xiaohongshu.comment.biz.model.dto.PublishCommentMqDTO;
 import com.kaiming.xiaohongshu.comment.biz.model.vo.*;
 import com.kaiming.xiaohongshu.comment.biz.retry.SendMqRetryHelper;
@@ -35,11 +38,19 @@ import com.kaiming.xiaohongshu.user.dto.resp.FindUserByIdRespDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
+import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.checkerframework.checker.units.qual.K;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Service;
 
 
@@ -79,6 +90,8 @@ public class CommentServiceImpl implements CommentService {
     private RedisTemplate<String, Object> redisTemplate;
     @Resource(name = "taskExecutor")
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    @Resource
+    private RocketMQTemplate rocketMQTemplate;
 
     private static final Cache<Long, String> LOCAL_CACHE = Caffeine.newBuilder()
             .initialCapacity(10000) // 设置初始容量为 10000 个条目
@@ -457,6 +470,95 @@ public class CommentServiceImpl implements CommentService {
         List<CommentDO> childCommentDOS = commentDOMapper.selectChildPageList(parentCommentId, offset, pageSize);
         getChildCommentDataAndSync2Redis(childCommentDOS, childCommentRespVOS);
         return PageResponse.success(childCommentRespVOS, pageNo, count, pageSize);
+    }
+
+    /**
+     * 点赞评论
+     * @param likeCommentReqVO
+     * @return
+     */
+    @Override
+    public Response<?> LikeComment(LikeCommentReqVO likeCommentReqVO) {
+        Long commentId = likeCommentReqVO.getCommentId();
+        // 1. 校验被点赞的评论是否存在
+        checkCommentIsExist(commentId);
+        // 2. 判断目标评论，是否已经被点赞
+        Long userId = LoginUserContextHolder.getUserId();
+        // 创建Redis key
+        String rbitmapUserCommentLikeListKey = RedisKeyConstants.buildRbitmapCommentLikesKey(userId);
+        
+        // 脚本
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        // 脚本路径
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/rbitmap_comment_like_check.lua")));
+        // 返回值类型
+        script.setResultType(Long.class);
+        // 执行 Lua 脚本，拿到返回结果
+        Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapUserCommentLikeListKey), commentId);
+
+        CommentLikeLuaResultEnum commentLikeLuaResultEnum = CommentLikeLuaResultEnum.valueOf(result);
+        
+        switch (commentLikeLuaResultEnum) {
+            case NOT_EXIST -> {
+                
+            }
+            case COMMENT_LIKED -> {
+                
+            }
+        }
+        // 3. 发送 MQ, 异步将评论点赞记录落库
+        // 构建消息体 DTO
+        LikeUnlikeCommentMqDTO likeUnlikeCommentMqDTO = LikeUnlikeCommentMqDTO.builder()
+                .userId(userId)
+                .commentId(commentId)
+                .type(LikeUnlikeCommentTypeEnum.LIKE.getCode())
+                .createTime(LocalDateTime.now())
+                .build();
+        // 构建消息对象，并将 DTO 转成 Json 字符串设置到消息体中
+        Message<String> message = MessageBuilder.withPayload(JsonUtils.toJsonString(likeUnlikeCommentMqDTO)).build();
+        // 通过冒号连接, 可让 MQ 发送给主题 Topic 时，携带上标签 Tag
+        String destination = MQConstants.TOPIC_COMMENT_LIKE_OR_UNLIKE + ":" + MQConstants.TAG_LIKE;
+        // MQ 分区键
+        String hashKey = String.valueOf(userId);
+        // 异步发送 MQ 消息，提升接口响应速度
+        rocketMQTemplate.asyncSendOrderly(destination, message, hashKey, new SendCallback() {
+            @Override
+            public void onSuccess(SendResult sendResult) {
+                log.info("==> 【评论点赞】MQ 发送成功，SendResult: {}", sendResult);
+            }
+
+            @Override
+            public void onException(Throwable throwable) {
+                log.error("==> 【评论点赞】MQ 发送异常: ", throwable);
+            }
+        });
+        
+        return Response.success();
+    }
+
+    /**
+     * 检查评论是否存在
+     * @param commentId
+     */
+    private void checkCommentIsExist(Long commentId) {
+        // 本地缓存是否存在
+        String localCacheJson  = LOCAL_CACHE.getIfPresent(commentId);
+        
+        // 若不本地缓存中不存在
+        if(StringUtils.isEmpty(localCacheJson)){
+            // 再从 Redis 中校验
+            String commentDetailRedisKey  = RedisKeyConstants.buildCommentDetailKey(commentId);
+            boolean hasKey = redisTemplate.hasKey(commentDetailRedisKey);
+            // 缓存中不存在，查询数据库
+            if (!hasKey) {
+                CommentDO commentDO = commentDOMapper.selectByPrimaryKey(commentId);
+                // 若数据库中，该评论也不存在，抛出业务异常
+                if (Objects.isNull(commentDO)) {
+                    throw new BizException(ResponseCodeEnum.COMMENT_NOT_FOUND);
+                }
+            }
+        }
+        
     }
 
     /**

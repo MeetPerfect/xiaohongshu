@@ -46,4 +46,10 @@ public class CommentController {
     public PageResponse<FindChildCommentItemRespVO> findChildCommentPageList(@RequestBody FindChildCommentPageListReqVO findChildCommentPageListReqVO) {
         return commentService.findChildCommentPageList(findChildCommentPageListReqVO);
     }
+    
+    @PostMapping("/like")
+    @ApiOperationLog(description = "点赞评论")
+    public Response<?> likeComment(@RequestBody LikeCommentReqVO likeCommentReqVO) {
+        return commentService.LikeComment(likeCommentReqVO);
+    }
 }

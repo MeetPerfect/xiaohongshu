@@ -56,6 +56,11 @@ public class RedisKeyConstants {
      * Hash Field: 子评论总数
      */
     public static final String FIELD_CHILD_COMMENT_TOTAL = "childCommentTotal";
+
+    /**
+     * Hash Field: 笔记评论总数
+     */
+    public static final String FIELD_COMMENT_TOTAL = "commentTotal";
     
     /**
      * 构建用户维度计数 Key

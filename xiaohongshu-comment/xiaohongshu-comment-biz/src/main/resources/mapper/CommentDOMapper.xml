@@ -100,6 +100,12 @@
             #{commentId}
         </foreach>
     </select>
+    <select id="selectChildCommentsByParentIdAndLimit" resultMap="BaseResultMap" parameterType="map">
+        select id, create_time
+        from t_comment
+        where parent_id = #{parentId} and level = 2
+        order by create_time asc limit #{limit}
+    </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
         delete
         from t_comment

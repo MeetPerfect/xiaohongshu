@@ -18,7 +18,9 @@ import com.kaiming.framework.common.util.JsonUtils;
 import com.kaiming.xiaohongshu.comment.biz.constant.MQConstants;
 import com.kaiming.xiaohongshu.comment.biz.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentDO;
+import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentLikeDO;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentDOMapper;
+import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentLikeDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.NoteCountDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.enums.CommentLevelEnum;
 import com.kaiming.xiaohongshu.comment.biz.enums.CommentLikeLuaResultEnum;
@@ -92,6 +94,8 @@ public class CommentServiceImpl implements CommentService {
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
     @Resource
     private RocketMQTemplate rocketMQTemplate;
+    @Resource
+    private CommentLikeDOMapper commentLikeDOMapper;
 
     private static final Cache<Long, String> LOCAL_CACHE = Caffeine.newBuilder()
             .initialCapacity(10000) // 设置初始容量为 10000 个条目
@@ -474,6 +478,7 @@ public class CommentServiceImpl implements CommentService {
 
     /**
      * 点赞评论
+     *
      * @param likeCommentReqVO
      * @return
      */
@@ -486,7 +491,7 @@ public class CommentServiceImpl implements CommentService {
         Long userId = LoginUserContextHolder.getUserId();
         // 创建Redis key
         String rbitmapUserCommentLikeListKey = RedisKeyConstants.buildRbitmapCommentLikesKey(userId);
-        
+
         // 脚本
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         // 脚本路径
@@ -497,13 +502,35 @@ public class CommentServiceImpl implements CommentService {
         Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapUserCommentLikeListKey), commentId);
 
         CommentLikeLuaResultEnum commentLikeLuaResultEnum = CommentLikeLuaResultEnum.valueOf(result);
-        
+
         switch (commentLikeLuaResultEnum) {
             case NOT_EXIST -> {
+                // 从数据库中校验评论是否被点赞，并异步初始化布隆过滤器，设置过期时间
+                int count = commentLikeDOMapper.selectCountByUserIdAndCommentId(userId, commentId);
+                // 保底1小小时+随机秒数
+                long expireSeconds = 60 * 60 + RandomUtil.randomInt(60 * 60);
+                if (count > 0) {
+                    // 异步初始化
+                    threadPoolTaskExecutor.submit(() ->
+                            batchAddCommentLike2RbitmapAndExpire(userId, expireSeconds, rbitmapUserCommentLikeListKey));
+                    throw new BizException(ResponseCodeEnum.COMMENT_ALREADY_LIKED);
+                }
+                // 若目标评论未被点赞，查询当前用户是否有点赞其他评论，有则同步初始化布隆过滤器
+                batchAddCommentLike2RbitmapAndExpire(userId, expireSeconds, rbitmapUserCommentLikeListKey);
+                
+                script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_add_comment_like_and_expire.lua")));
+                script.setResultType(Long.class);
+                
+                redisTemplate.execute(script, Collections.singletonList(rbitmapUserCommentLikeListKey), commentId,  expireSeconds);
                 
             }
             case COMMENT_LIKED -> {
-                
+                // 该评论已点赞
+                // 查询数据库校验是否点赞
+                int count = commentLikeDOMapper.selectCountByUserIdAndCommentId(userId, commentId);
+                if (count > 0) {
+                    throw new BizException(ResponseCodeEnum.COMMENT_ALREADY_LIKED);
+                }
             }
         }
         // 3. 发送 MQ, 异步将评论点赞记录落库
@@ -532,22 +559,57 @@ public class CommentServiceImpl implements CommentService {
                 log.error("==> 【评论点赞】MQ 发送异常: ", throwable);
             }
         });
-        
+
         return Response.success();
     }
 
     /**
+     * 初始化评论点赞
+     *
+     * @param userId
+     * @param expireSeconds
+     * @param rbitmapUserCommentLikeListKey
+     * @return
+     */
+    private void batchAddCommentLike2RbitmapAndExpire(Long userId, long expireSeconds, String rbitmapUserCommentLikeListKey) {
+        try {
+            // 当前用户点赞的所有评论
+            List<CommentLikeDO> commentLikeDOS = commentLikeDOMapper.selectByUserId(userId);
+
+            // 若不为空，批量添加到布隆过滤器中
+            if(CollUtil.isNotEmpty(commentLikeDOS)) {
+                DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+                // Lua 脚本路径
+                script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_batch_add_comment_like_and_expire.lua")));
+                // 返回值类型
+                script.setResultType(Long.class);
+                
+                List<Object> luaArgs = Lists.newArrayList();
+                commentLikeDOS.forEach(commentLikeDO -> {
+                    luaArgs.add(commentLikeDO.getCommentId());
+                    luaArgs.add(expireSeconds);
+                });
+                redisTemplate.execute(script, Collections.singletonList(rbitmapUserCommentLikeListKey), luaArgs.toArray());
+            }
+            
+        } catch (Exception e) {
+            log.error("## 异步初始化【评论点赞】布隆过滤器异常: ", e);
+        }
+    }
+
+    /**
      * 检查评论是否存在
+     *
      * @param commentId
      */
     private void checkCommentIsExist(Long commentId) {
         // 本地缓存是否存在
-        String localCacheJson  = LOCAL_CACHE.getIfPresent(commentId);
-        
+        String localCacheJson = LOCAL_CACHE.getIfPresent(commentId);
+
         // 若不本地缓存中不存在
-        if(StringUtils.isEmpty(localCacheJson)){
+        if (StringUtils.isEmpty(localCacheJson)) {
             // 再从 Redis 中校验
-            String commentDetailRedisKey  = RedisKeyConstants.buildCommentDetailKey(commentId);
+            String commentDetailRedisKey = RedisKeyConstants.buildCommentDetailKey(commentId);
             boolean hasKey = redisTemplate.hasKey(commentDetailRedisKey);
             // 缓存中不存在，查询数据库
             if (!hasKey) {
@@ -558,7 +620,7 @@ public class CommentServiceImpl implements CommentService {
                 }
             }
         }
-        
+
     }
 
     /**

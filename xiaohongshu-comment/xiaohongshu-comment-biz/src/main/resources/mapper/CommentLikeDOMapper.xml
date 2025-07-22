@@ -16,6 +16,14 @@
     from t_comment_like
     where id = #{id,jdbcType=BIGINT}
   </select>
+    <select id="selectCountByUserIdAndCommentId" resultType="int" parameterType="map">
+      select count(1) from t_comment_like
+      where user_id= #{userId} and comment_id = #{commentId} limit 1
+    </select>
+  <select id="selectByUserId" resultMap="BaseResultMap" parameterType="map">
+    select comment_id from t_comment_like
+    where user_id = #{userId}
+  </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_comment_like
     where id = #{id,jdbcType=BIGINT}

@@ -588,13 +588,17 @@ public class CommentServiceImpl implements CommentService {
 
         CommentUnlikeLuaResultEnum commentUnlikeLuaResultEnum = CommentUnlikeLuaResultEnum.valueOf(result);
         
+        if (Objects.isNull(commentUnlikeLuaResultEnum)) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+        
         switch (commentUnlikeLuaResultEnum) {
             case NOT_EXIST -> {
                 // 异步初始化
                 threadPoolTaskExecutor.submit(() -> {
                     // 一个小时的过期时间
                     long expireSeconds = 60 * 60 + RandomUtil.randomInt(60 * 60);
-                    batchAddCommentLike2BloomAndExpire(userId, expireSeconds, rbitmapCommentLikeListKey);
+                    batchAddCommentLike2RbitmapAndExpire(userId, expireSeconds, rbitmapCommentLikeListKey);
                 });
 
                 // 从数据库中校验评论是否被点赞
@@ -602,9 +606,7 @@ public class CommentServiceImpl implements CommentService {
                 // 未点赞，无法取消点赞操作，抛出业务异常
                 if (count == 0) throw new BizException(ResponseCodeEnum.COMMENT_NOT_LIKED);
             }
-            case COMMENT_NOT_LIKED -> {
-                
-            }
+            case COMMENT_NOT_LIKED -> throw new BizException(ResponseCodeEnum.COMMENT_NOT_LIKED);
         }
 
         // 3. 发送顺序 MQ，删除评论点赞记录
@@ -635,17 +637,7 @@ public class CommentServiceImpl implements CommentService {
         
         return Response.success();
     }
-
-    /**
-     * 
-     * @param userId
-     * @param expireSeconds
-     * @param rbitmapCommentLikeListKey
-     */
-    private void batchAddCommentLike2BloomAndExpire(Long userId, long expireSeconds, String rbitmapCommentLikeListKey) {
-        
-    }
-
+    
     /**
      * 初始化评论点赞
      * @param userId

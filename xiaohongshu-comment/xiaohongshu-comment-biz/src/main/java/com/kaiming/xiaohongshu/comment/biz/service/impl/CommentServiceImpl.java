@@ -22,10 +22,7 @@ import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentLikeDO;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.CommentLikeDOMapper;
 import com.kaiming.xiaohongshu.comment.biz.domain.mapper.NoteCountDOMapper;
-import com.kaiming.xiaohongshu.comment.biz.enums.CommentLevelEnum;
-import com.kaiming.xiaohongshu.comment.biz.enums.CommentLikeLuaResultEnum;
-import com.kaiming.xiaohongshu.comment.biz.enums.LikeUnlikeCommentTypeEnum;
-import com.kaiming.xiaohongshu.comment.biz.enums.ResponseCodeEnum;
+import com.kaiming.xiaohongshu.comment.biz.enums.*;
 import com.kaiming.xiaohongshu.comment.biz.model.dto.LikeUnlikeCommentMqDTO;
 import com.kaiming.xiaohongshu.comment.biz.model.dto.PublishCommentMqDTO;
 import com.kaiming.xiaohongshu.comment.biz.model.vo.*;
@@ -564,8 +561,93 @@ public class CommentServiceImpl implements CommentService {
     }
 
     /**
+     * 取消评论点赞
+     * @param unlikeCommentReqVO
+     * @return
+     */
+    @Override
+    public Response<?> UnlikeComment(UnlikeCommentReqVO unlikeCommentReqVO) {
+        // 评论 Id
+        Long commentId = unlikeCommentReqVO.getCommentId();
+        
+        // 1.校验评论是否存在
+        checkCommentIsExist(commentId);
+        
+        // 2. 判断评论未点赞
+        // 当前用户Id
+        Long userId = LoginUserContextHolder.getUserId();
+        String rbitmapCommentLikeListKey = RedisKeyConstants.buildRbitmapCommentLikesKey(userId);    
+        
+        // 脚本路径
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/rbitmap_comment_unlike_check.lua")));
+        // 返回值类型
+        script.setResultType(Long.class);
+        // 执行 Lua 脚本，拿到返回结果
+        Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapCommentLikeListKey), commentId);
+
+        CommentUnlikeLuaResultEnum commentUnlikeLuaResultEnum = CommentUnlikeLuaResultEnum.valueOf(result);
+        
+        switch (commentUnlikeLuaResultEnum) {
+            case NOT_EXIST -> {
+                // 异步初始化
+                threadPoolTaskExecutor.submit(() -> {
+                    // 一个小时的过期时间
+                    long expireSeconds = 60 * 60 + RandomUtil.randomInt(60 * 60);
+                    batchAddCommentLike2BloomAndExpire(userId, expireSeconds, rbitmapCommentLikeListKey);
+                });
+
+                // 从数据库中校验评论是否被点赞
+                int count = commentLikeDOMapper.selectCountByUserIdAndCommentId(userId, commentId);
+                // 未点赞，无法取消点赞操作，抛出业务异常
+                if (count == 0) throw new BizException(ResponseCodeEnum.COMMENT_NOT_LIKED);
+            }
+            case COMMENT_NOT_LIKED -> {
+                
+            }
+        }
+
+        // 3. 发送顺序 MQ，删除评论点赞记录
+        LikeUnlikeCommentMqDTO likeUnlikeCommentMqDTO = LikeUnlikeCommentMqDTO.builder()
+                .userId(userId)
+                .commentId(commentId)
+                .type(LikeUnlikeCommentTypeEnum.UNLIKE.getCode())
+                .createTime(LocalDateTime.now())
+                .build();
+        // 构建消息对象，并将 DTO 转成 Json 字符串设置到消息体中
+        Message<String> message = MessageBuilder.withPayload(JsonUtils.toJsonString(likeUnlikeCommentMqDTO)).build();
+        // 通过冒号连接, 可让 MQ 发送给主题 Topic 时，携带上标签 Tag
+        String destination = MQConstants.TOPIC_COMMENT_LIKE_OR_UNLIKE + ":" + MQConstants.TAG_UNLIKE;
+        // MQ 分区键
+        String hashKey = String.valueOf(userId);
+        // 异步发送 MQ 顺序消息，提升接口响应速度
+        rocketMQTemplate.asyncSendOrderly(destination, message, hashKey, new SendCallback() {
+            @Override
+            public void onSuccess(SendResult sendResult) {
+                log.info("==> 【评论取消点赞】MQ 发送成功，SendResult: {}", sendResult);
+            }
+
+            @Override
+            public void onException(Throwable throwable) {
+                log.error("==> 【评论取消点赞】MQ 发送异常: ", throwable);
+            }
+        });
+        
+        return Response.success();
+    }
+
+    /**
+     * 
+     * @param userId
+     * @param expireSeconds
+     * @param rbitmapCommentLikeListKey
+     */
+    private void batchAddCommentLike2BloomAndExpire(Long userId, long expireSeconds, String rbitmapCommentLikeListKey) {
+        
+    }
+
+    /**
      * 初始化评论点赞
-     *
      * @param userId
      * @param expireSeconds
      * @param rbitmapUserCommentLikeListKey

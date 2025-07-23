@@ -42,4 +42,11 @@ public interface CommentService {
      * @return
      */
     Response<?> LikeComment(LikeCommentReqVO likeCommentReqVO);
+
+    /**
+     * 取消点赞评论
+     * @param unlikeCommentReqVO
+     * @return
+     */
+    Response<?> UnlikeComment(UnlikeCommentReqVO unlikeCommentReqVO);
 }

@@ -129,7 +129,12 @@ public class RedisKeyConstants {
     public static String buildBloomCommentLikesKey(Long userId) {
         return BLOOM_COMMENT_LIKES_KEY_PREFIX + userId;
     }
-    
+
+    /**
+     * rbitmap - 用户点赞评论 key
+     * @param userId
+     * @return
+     */
     public static String buildRbitmapCommentLikesKey(Long userId) {
         return R_BITMAP_COMMENT_LIKES_KEY_PREFIX + userId;
     }

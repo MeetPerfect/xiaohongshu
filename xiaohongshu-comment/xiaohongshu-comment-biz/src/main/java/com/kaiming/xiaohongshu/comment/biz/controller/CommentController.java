@@ -52,4 +52,10 @@ public class CommentController {
     public Response<?> likeComment(@RequestBody LikeCommentReqVO likeCommentReqVO) {
         return commentService.LikeComment(likeCommentReqVO);
     }
+    
+    @PostMapping("/unlike")
+    @ApiOperationLog(description = "取消点赞评论")
+    public Response<?> unlikeComment(@RequestBody UnlikeCommentReqVO unlikeCommentReqVO) {
+        return commentService.UnlikeComment(unlikeCommentReqVO);
+    }
 }

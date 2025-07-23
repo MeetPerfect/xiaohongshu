@@ -28,6 +28,13 @@
     delete from t_comment_like
     where id = #{id,jdbcType=BIGINT}
   </delete>
+  <delete id="batchDelete" parameterType="map">
+    DELETE FROM t_comment_like
+    WHERE (comment_id, user_id) IN
+    <foreach collection="unlikes" item="unlike" open="(" separator="," close=")">
+      (#{unlike.commentId}, #{unlike.userId})
+    </foreach>
+  </delete>
   <insert id="insert" parameterType="com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentLikeDO">
     insert into t_comment_like (id, user_id, comment_id, 
       create_time)
@@ -64,6 +71,14 @@
         #{createTime,jdbcType=TIMESTAMP},
       </if>
     </trim>
+  </insert>
+  <insert id="batchInsert" parameterType="list">
+    INSERT INTO t_comment_like (comment_id, user_id, create_time)
+    VALUES
+    <foreach collection="likes" item="like" separator=",">
+      (#{like.commentId}, #{like.userId}, #{like.createTime})
+    </foreach>
+    ON DUPLICATE KEY UPDATE id=id
   </insert>
   <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentLikeDO">
     update t_comment_like

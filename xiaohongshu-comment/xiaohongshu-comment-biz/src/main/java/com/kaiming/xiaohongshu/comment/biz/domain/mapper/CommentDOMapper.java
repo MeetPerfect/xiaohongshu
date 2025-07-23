@@ -22,6 +22,7 @@ public interface CommentDOMapper {
 
     /**
      * 根据评论 Id 批量查询
+     *
      * @param commentIds
      * @return
      */
@@ -29,6 +30,7 @@ public interface CommentDOMapper {
 
     /**
      * 批量插入评论数据
+     *
      * @param comments
      * @return
      */
@@ -36,6 +38,7 @@ public interface CommentDOMapper {
 
     /**
      * 批量更新热度值
+     *
      * @param commentIds
      * @param commentHeatBOS
      * @return
@@ -45,6 +48,7 @@ public interface CommentDOMapper {
 
     /**
      * 查询一级评论下回复最早的评论
+     *
      * @param parentId
      * @return
      */
@@ -52,15 +56,17 @@ public interface CommentDOMapper {
 
     /**
      * 更新一级评论的 firstReplyCommentId
+     *
      * @param firstReplyCommentId
      * @param id
      * @return
      */
-    int updateFirstReplyCommentIdByPrimaryKey(@Param("firstReplyCommentId") Long firstReplyCommentId, 
+    int updateFirstReplyCommentIdByPrimaryKey(@Param("firstReplyCommentId") Long firstReplyCommentId,
                                               @Param("id") Long id);
 
     /**
      * 查找评论内容分页数据
+     *
      * @param noteId
      * @param offset
      * @param pageSize
@@ -72,6 +78,7 @@ public interface CommentDOMapper {
 
     /**
      * 批量查找二级评论
+     *
      * @param commentIds
      * @return
      */
@@ -79,6 +86,7 @@ public interface CommentDOMapper {
 
     /**
      * 查询热门评论
+     *
      * @param noteId
      * @return
      */
@@ -86,6 +94,7 @@ public interface CommentDOMapper {
 
     /**
      * 查询一级评论下子评论总数
+     *
      * @param commentId
      * @return
      */
@@ -93,18 +102,20 @@ public interface CommentDOMapper {
 
     /**
      * 查询二级评论分页数据
+     *
      * @param parentId
      * @param offset
      * @param pageSize
      * @return
      */
-    List<CommentDO> selectChildPageList(@Param("parentId") Long parentId, 
-                                        @Param("offset") long offset, 
+    List<CommentDO> selectChildPageList(@Param("parentId") Long parentId,
+                                        @Param("offset") long offset,
                                         @Param("pageSize") long pageSize);
 
 
     /**
      * 批量查询计数数据
+     *
      * @param commentIds
      * @return
      */
@@ -112,10 +123,45 @@ public interface CommentDOMapper {
 
     /**
      * 查询子评论
+     *
      * @param parentId
      * @param limit
      * @return
      */
     List<CommentDO> selectChildCommentsByParentIdAndLimit(@Param("parentId") Long parentId,
                                                           @Param("limit") int limit);
+
+    /**
+     * 删除一级评论下，所有二级评论
+     *
+     * @param commentId
+     * @return
+     */
+    int deleteByParentId(Long commentId);
+
+    /**
+     * 批量删除评论
+     *
+     * @param commentIds
+     * @return
+     */
+    int deleteByIds(List<Long> commentIds);
+
+    /**
+     * 根据 reply_comment_id 查询
+     *
+     * @param commentId
+     * @return
+     */
+    CommentDO selectByReplyCommentId(Long commentId);
+
+    /**
+     * 更新一级评论的子评论数
+     *
+     * @param commentId
+     * @param count
+     * @return
+     */
+    int updateChildCommentTotalByCommentId(@Param("commentId") Long commentId,
+                                           @Param("count") Integer count);
 }

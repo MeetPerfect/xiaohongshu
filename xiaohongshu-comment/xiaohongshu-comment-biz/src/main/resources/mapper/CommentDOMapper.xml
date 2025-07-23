@@ -106,10 +106,26 @@
         where parent_id = #{parentId} and level = 2
         order by create_time asc limit #{limit}
     </select>
+    <select id="selectByReplyCommentId" resultMap="BaseResultMap" parameterType="long">
+        select <include refid="Base_Column_List"/>
+        from  t_comment
+        where reply_comment_id = #{commentId}
+    </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
         delete
         from t_comment
         where id = #{id,jdbcType=BIGINT}
+    </delete>
+    <delete id="deleteByParentId" parameterType="long">
+        delete from t_comment 
+        where parent_id = #{parentId}
+    </delete>
+    <delete id="deleteByIds" parameterType="list">
+        delete from t_comment 
+        where id in 
+        <foreach collection="commentIds" open="(" separator="," close=")" item="commentId">
+            #{commentId}
+        </foreach>
     </delete>
     <insert id="insert" parameterType="com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentDO">
         insert into t_comment (id, note_id, user_id,
@@ -318,5 +334,9 @@
         update t_comment
         set first_reply_comment_id = #{firstReplyCommentId}
         where id = #{id}
+    </update>
+    <update id="updateChildCommentTotalByCommentId" parameterType="map">
+        update t_comment set child_comment_total = child_comment_total + #{count}
+        where id = #{commentId}
     </update>
 </mapper>

@@ -5,6 +5,7 @@ import com.kaiming.framework.common.response.PageResponse;
 import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.comment.biz.model.vo.*;
 import com.kaiming.xiaohongshu.comment.biz.service.CommentService;
+import com.kaiming.xiaohongshu.kv.dto.req.DeleteCommentContentReqDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,5 +58,11 @@ public class CommentController {
     @ApiOperationLog(description = "取消点赞评论")
     public Response<?> unlikeComment(@RequestBody UnlikeCommentReqVO unlikeCommentReqVO) {
         return commentService.UnlikeComment(unlikeCommentReqVO);
+    }
+    
+    @PostMapping("/delete")
+    @ApiOperationLog(description = "删除评论")
+    public Response<?> deleteCommentContent(@RequestBody DeleteCommentReqVO deleteCommentReqVO) {
+        return commentService.deleteComment(deleteCommentReqVO);
     }
 }

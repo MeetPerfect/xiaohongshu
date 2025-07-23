@@ -4,7 +4,6 @@ import cn.hutool.core.collection.CollUtil;
 import com.google.common.collect.Lists;
 import com.kaiming.framework.common.constant.DateConstants;
 import com.kaiming.framework.common.response.Response;
-import com.kaiming.xiaohongshu.comment.biz.domain.dataobject.CommentDO;
 import com.kaiming.xiaohongshu.comment.biz.model.bo.CommentBO;
 import com.kaiming.xiaohongshu.kv.api.KeyValueFeignApi;
 import com.kaiming.xiaohongshu.kv.dto.req.BatchAddCommentContentReqDTO;
@@ -15,7 +14,6 @@ import com.kaiming.xiaohongshu.kv.dto.resp.FindCommentContentRespDTO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 

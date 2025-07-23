@@ -5,6 +5,7 @@ import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.kv.biz.service.CommentContentService;
 import com.kaiming.xiaohongshu.kv.dto.req.BatchAddCommentContentReqDTO;
 import com.kaiming.xiaohongshu.kv.dto.req.BatchFindCommentContentReqDTO;
+import com.kaiming.xiaohongshu.kv.dto.req.DeleteCommentContentReqDTO;
 import com.kaiming.xiaohongshu.kv.dto.req.FindCommentContentReqDTO;
 import com.kaiming.xiaohongshu.kv.dto.resp.FindCommentContentRespDTO;
 import jakarta.annotation.Resource;
@@ -27,18 +28,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/kv")
 @Slf4j
 public class CommentContentController {
-    
+
     @Resource
     private CommentContentService commentContentService;
-    
+
     @PostMapping("/comment/content/batchAdd")
     @ApiOperationLog(description = "批量存储评论内容")
     public Response<?> batchAddCommentContent(@RequestBody BatchAddCommentContentReqDTO batchAddCommentContentReqDTO) {
         return commentContentService.batchAddCommentContent(batchAddCommentContentReqDTO);
     }
-    
+
     @PostMapping("/comment/content/batchFind")
+    @ApiOperationLog(description = "批量查询评论")
     public Response<?> batchFindCommentContent(@RequestBody BatchFindCommentContentReqDTO batchFindCommentContentReqDTO) {
         return commentContentService.batchFindCommentContent(batchFindCommentContentReqDTO);
+    }
+
+    @PostMapping("/comment/content/delete")
+    @ApiOperationLog(description = "删除评论内容")
+    public Response<?> deleteCommentContent(@RequestBody DeleteCommentContentReqDTO deleteCommentContentReqDTO) {
+        return commentContentService.deleteCommentContent(deleteCommentContentReqDTO);
     }
 }

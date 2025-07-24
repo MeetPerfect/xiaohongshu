@@ -17,6 +17,10 @@
             <groupId>com.kaiming</groupId>
             <artifactId>xiaohongshu-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.kaiming</groupId>
+            <artifactId>xiaohongshu-count-api</artifactId>
+        </dependency>
         <!--业务接口日志文件-->
         <dependency>
             <groupId>com.kaiming</groupId>

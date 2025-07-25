@@ -31,6 +31,7 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
 
     USER_NOT_FOUND("USER-20007", "该用户不存在"),
     CANT_UPDATE_OTHER_USER_PROFILE("USER-20008", "无权限修改他人用户信息"),
+    USER_NOT_NULL("USER-20009", "用户Id不能为空"),
     ;
     
     private final String errorCode;

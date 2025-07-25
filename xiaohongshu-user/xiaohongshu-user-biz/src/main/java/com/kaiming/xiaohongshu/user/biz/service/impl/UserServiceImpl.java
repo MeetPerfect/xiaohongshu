@@ -109,6 +109,9 @@ public class UserServiceImpl implements UserService {
     public Response<?> updateUserInfo(UpdateUserInfoReqVO updateUserInfoReqVO) {
         // 被修改的用户Id
         Long userId = updateUserInfoReqVO.getUserId();
+        if (Objects.isNull(userId)) {
+            throw new BizException(ResponseCodeEnum.USER_NOT_NULL);
+        }
         // 当前登录用户
         Long currUserId = LoginUserContextHolder.getUserId();
         // 非号主本人，无法修改其个人信息
@@ -545,9 +548,11 @@ public class UserServiceImpl implements UserService {
         String userProfileJson = (String) redisTemplate.opsForValue().get(userProfileRedisKey);
         if (StringUtils.isNotBlank(userProfileJson)) {
             FindUserProfileRespVO findUserProfileRespVO = JsonUtils.parseObject(userProfileJson, FindUserProfileRespVO.class);
-
+            
             // 异步同步到本地缓存
             asyncUserProfile2LocalCache(userId, findUserProfileRespVO);
+            // 如果是博主本人查看，保证计数的实时性
+            authorGetActualCountData(userId, findUserProfileRespVO);
             return Response.success(findUserProfileRespVO);
         }
         //  3. 再查询数据库
@@ -566,6 +571,22 @@ public class UserServiceImpl implements UserService {
         // 年龄计算
         LocalDate birthday = userDO.getBirthday();
         findUserProfileRespVO.setAge(Objects.isNull(birthday) ? 0 : DateUtils.calculateAge(birthday));
+        // RPC: Feign 调用计数服务
+        // 关注数、粉丝数、收藏与点赞总数；获得的点赞数、收藏数
+        rpcCountServiceAndSetData(userId, findUserProfileRespVO);
+        // 异步同步到 Redis 中
+        asyncUserProfile2Redis(userProfileRedisKey, findUserProfileRespVO);
+        // 异步同步到本地缓存
+        asyncUserProfile2LocalCache(userId, findUserProfileRespVO);
+        return Response.success(findUserProfileRespVO);
+    }
+
+    /**
+     * Feign 调用计数服务, 并设置计数数据
+     * @param userId
+     * @param findUserProfileRespVO
+     */
+    private void rpcCountServiceAndSetData(Long userId, FindUserProfileRespVO findUserProfileRespVO) {
         // Rpc Feign 调用计数服务
         FindUserCountsByIdRespDTO findUserCountsByIdRspDTO = countRpcService.findUserCountById(userId);
 
@@ -582,11 +603,19 @@ public class UserServiceImpl implements UserService {
             findUserProfileRespVO.setLikeAndCollectTotal(NumberUtils.formatNumberString(likeTotal + collectTotal));
             findUserProfileRespVO.setCollectTotal(NumberUtils.formatNumberString(collectTotal));
             findUserProfileRespVO.setNoteTotal(NumberUtils.formatNumberString(noteTotal));
-
-            // 异步同步到 Redis 中
-            asyncUserProfile2Redis(userProfileRedisKey, findUserProfileRespVO);
         }
-        return Response.success(findUserProfileRespVO);
+    }
+
+    /**
+     * 
+     * @param userId
+     * @param findUserProfileRespVO
+     */
+    private void authorGetActualCountData(Long userId, FindUserProfileRespVO findUserProfileRespVO) {
+        // 用户本人查询信息
+        if(Objects.equals(userId, LoginUserContextHolder.getUserId())){
+            rpcCountServiceAndSetData(userId, findUserProfileRespVO);
+        }
     }
 
     /**

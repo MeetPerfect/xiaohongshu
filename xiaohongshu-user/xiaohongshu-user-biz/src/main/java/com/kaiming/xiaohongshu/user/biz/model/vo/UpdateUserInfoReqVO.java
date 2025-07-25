@@ -1,5 +1,6 @@
 package com.kaiming.xiaohongshu.user.biz.model.vo;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class UpdateUserInfoReqVO {
     /**
      * 用户Id
      */
+    @NotNull(message = "用户Id不能为空")
     private Long userId;    
     /**
      * 头像

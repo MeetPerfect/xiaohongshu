@@ -4,6 +4,8 @@ import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdReqDTO;
 import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdRespDTO;
 
+import java.util.List;
+
 /**
  * ClassName: CountService
  * Package: com.kaiming.xiaohongshu.count.biz.service

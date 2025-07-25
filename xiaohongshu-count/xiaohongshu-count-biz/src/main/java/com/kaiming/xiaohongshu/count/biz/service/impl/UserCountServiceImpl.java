@@ -1,17 +1,20 @@
 package com.kaiming.xiaohongshu.count.biz.service.impl;
 
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.count.biz.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.count.biz.domain.dataobject.UserCountDO;
 import com.kaiming.xiaohongshu.count.biz.domain.mapper.UserCountDOMapper;
 import com.kaiming.xiaohongshu.count.biz.service.UserCountService;
+import com.kaiming.xiaohongshu.count.dto.FindNoteCountByIdReqDTO;
+import com.kaiming.xiaohongshu.count.dto.FindNoteCountByIdRespDTO;
 import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdReqDTO;
 import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdRespDTO;
 import jakarta.annotation.Resource;
-import org.checkerframework.checker.units.qual.K;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -34,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * @Version 1.0
  */
 @Service
-public class CountServiceImpl implements UserCountService {
+public class UserCountServiceImpl implements UserCountService {
 
     @Resource
     private UserCountDOMapper userCountDOMapper;

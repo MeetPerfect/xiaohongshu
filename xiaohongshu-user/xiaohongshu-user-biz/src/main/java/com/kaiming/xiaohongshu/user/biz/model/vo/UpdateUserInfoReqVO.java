@@ -23,6 +23,10 @@ import java.time.LocalDate;
 @Builder
 public class UpdateUserInfoReqVO {
     /**
+     * 用户Id
+     */
+    private Long userId;    
+    /**
      * 头像
      */
     private MultipartFile avatar;

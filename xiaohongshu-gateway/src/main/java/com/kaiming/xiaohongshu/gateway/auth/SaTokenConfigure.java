@@ -34,6 +34,7 @@ public class SaTokenConfigure {
                     SaRouter.match("/**")
                             .notMatch("/auth/login")
                             .notMatch("/auth/verification/code/send")
+                            .notMatch("/user/user/profile")
                             .check(r -> StpUtil.checkLogin());
 
                     // 权限校验

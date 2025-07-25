@@ -89,8 +89,15 @@ public class UserServiceImpl implements UserService {
 
     private static final Cache<Long, FindUserByIdRespDTO> LOCAL_CACHE = Caffeine.newBuilder()
             .initialCapacity(10000)
-            .maximumSize(100000)
+            .maximumSize(10000)
             .expireAfterWrite(1, TimeUnit.SECONDS)
+            .build();
+    
+    // 用户简介本地缓存
+    private static final Cache<Long, FindUserProfileRespVO> PROFILE_LOCAL_CACHE = Caffeine.newBuilder()
+            .initialCapacity(10000)
+            .maximumSize(10000)
+            .expireAfterWrite(5, TimeUnit.SECONDS)
             .build();
 
     @Override
@@ -404,7 +411,8 @@ public class UserServiceImpl implements UserService {
 
         // 从数据库中批量查询
         List<UserDO> userDOS = userDOMapper.selectByIds(userIdsNeedQuery);
-        List<FindUserByIdRespDTO> findUserByIdRespDTOS2 = null;;
+        List<FindUserByIdRespDTO> findUserByIdRespDTOS2 = null;
+        ;
 
         if (CollUtil.isNotEmpty(userDOS)) {
             // DO 转 DTO
@@ -420,27 +428,27 @@ public class UserServiceImpl implements UserService {
             List<FindUserByIdRespDTO> finalFindUserByIdRespDTOS = findUserByIdRespDTOS2;
             threadPoolTaskExecutor.submit(() -> {
                 // DTO 集合转 Map
-                Map<Long, FindUserByIdRespDTO> map  = finalFindUserByIdRespDTOS.stream()
+                Map<Long, FindUserByIdRespDTO> map = finalFindUserByIdRespDTOS.stream()
                         .collect(Collectors.toMap(FindUserByIdRespDTO::getId, p -> p));
-                
+
                 // 执行 pipeline 操作
                 redisTemplate.executePipelined(new SessionCallback<>() {
                     @Override
-                    public Object execute(RedisOperations operations)  {
+                    public Object execute(RedisOperations operations) {
                         for (UserDO userDO : userDOS) {
                             Long userId = userDO.getId();
-                            
+
                             // 用户信息缓存 Redis Key
                             String userInfoRedisKey = RedisKeyConstants.buildUserInfoKey(userId);
-                            
+
                             // DTO 转 JSON 字符串
                             FindUserByIdRespDTO findUserInfoByIdRespDTO = map.get(userId);
                             String value = JsonUtils.toJsonString(findUserInfoByIdRespDTO);
-                            
+
                             // 过期时间
-                            long expireSeconds  = 60 * 60 * 24 + RandomUtil.randomInt(60 * 60 * 24);
+                            long expireSeconds = 60 * 60 * 24 + RandomUtil.randomInt(60 * 60 * 24);
                             operations.opsForValue().set(userInfoRedisKey, value, expireSeconds, TimeUnit.SECONDS);
-                        }   
+                        }
                         return null;
                     }
                 });
@@ -456,6 +464,7 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 查询用户简介
+     *
      * @param findUserProfileReqVO
      * @return
      */
@@ -464,15 +473,29 @@ public class UserServiceImpl implements UserService {
         // 用户Id
         Long userId = findUserProfileReqVO.getUserId();
         // 若入参中用户 ID 为空，则查询当前登录用户
-        if(Objects.isNull(userId)){
+        if (Objects.isNull(userId)) {
             userId = LoginUserContextHolder.getUserId();
         }
+        // 1.查询本地缓存
+        FindUserProfileRespVO userProfileLocalCache  = PROFILE_LOCAL_CACHE.getIfPresent(userId);
+        if (Objects.nonNull(userProfileLocalCache)) {
+            log.info("## 用户主页信息命中本地缓存: {}", JsonUtils.toJsonString(userProfileLocalCache));
+            return Response.success(userProfileLocalCache);    
+        }
+        //  2. 优先查询 Redis 缓存
+        String userProfileRedisKey = RedisKeyConstants.buildUserProfileKey(userId);
 
-        // TODO 1. 优先查询缓存
+        String userProfileJson = (String) redisTemplate.opsForValue().get(userProfileRedisKey);
+        if (StringUtils.isNotBlank(userProfileJson)) {
+            FindUserProfileRespVO findUserProfileRespVO = JsonUtils.parseObject(userProfileJson, FindUserProfileRespVO.class);
 
-        // TODO 2. 再查询数据库
+            // 异步同步到本地缓存
+            asyncUserProfile2LocalCache(userId, findUserProfileRespVO);
+            return Response.success(findUserProfileRespVO);
+        }
+        //  3. 再查询数据库
         UserDO userDO = userDOMapper.selectByPrimaryKey(userId);
-        if (Objects.isNull(userDO)){
+        if (Objects.isNull(userDO)) {
             throw new BizException(ResponseCodeEnum.USER_NOT_FOUND);
         }
         FindUserProfileRespVO findUserProfileRespVO = FindUserProfileRespVO.builder()
@@ -487,22 +510,52 @@ public class UserServiceImpl implements UserService {
         LocalDate birthday = userDO.getBirthday();
         findUserProfileRespVO.setAge(Objects.isNull(birthday) ? 0 : DateUtils.calculateAge(birthday));
         // Rpc Feign 调用计数服务
-        FindUserCountsByIdRespDTO findUserCountsByIdRspDTO  = countRpcService.findUserCountById(userId);
-        
+        FindUserCountsByIdRespDTO findUserCountsByIdRspDTO = countRpcService.findUserCountById(userId);
+
         if (Objects.nonNull(findUserCountsByIdRspDTO)) {
             Long fansTotal = findUserCountsByIdRspDTO.getFansTotal();
             Long followingTotal = findUserCountsByIdRspDTO.getFollowingTotal();
             Long likeTotal = findUserCountsByIdRspDTO.getLikeTotal();
             Long noteTotal = findUserCountsByIdRspDTO.getNoteTotal();
             Long collectTotal = findUserCountsByIdRspDTO.getCollectTotal();
-            
+
             findUserProfileRespVO.setFansTotal(NumberUtils.formatNumberString(fansTotal));
             findUserProfileRespVO.setFollowingTotal(NumberUtils.formatNumberString(followingTotal));
             findUserProfileRespVO.setLikeTotal(NumberUtils.formatNumberString(likeTotal));
             findUserProfileRespVO.setLikeAndCollectTotal(NumberUtils.formatNumberString(likeTotal + collectTotal));
             findUserProfileRespVO.setCollectTotal(NumberUtils.formatNumberString(collectTotal));
             findUserProfileRespVO.setNoteTotal(NumberUtils.formatNumberString(noteTotal));
+
+            // 异步同步到 Redis 中
+            asyncUserProfile2Redis(userProfileRedisKey, findUserProfileRespVO);
         }
         return Response.success(findUserProfileRespVO);
+    }
+
+    /**
+     * 异步同步 本地缓存
+     * @param userId
+     * @param findUserProfileRespVO
+     */
+    private void asyncUserProfile2LocalCache(Long userId, FindUserProfileRespVO findUserProfileRespVO) {
+        threadPoolTaskExecutor.submit(() -> {
+            PROFILE_LOCAL_CACHE.put(userId, findUserProfileRespVO);
+        });
+    }
+
+    /**
+     * 异步同步 Redis
+     * @param userProfileRedisKey
+     * @param findUserProfileRespVO
+     */
+    private void asyncUserProfile2Redis(String userProfileRedisKey, FindUserProfileRespVO findUserProfileRespVO) {
+        threadPoolTaskExecutor.submit(() -> {
+            // 设置过期时间
+            long expireSeconds = 60 * 60 + RandomUtil.randomInt(60 * 60);
+
+            // 将 VO 转为 Json 字符串写入到 Redis 中
+            redisTemplate.opsForValue()
+                    .set(userProfileRedisKey, JsonUtils.toJsonString(findUserProfileRespVO), expireSeconds);
+        });
     }
 }

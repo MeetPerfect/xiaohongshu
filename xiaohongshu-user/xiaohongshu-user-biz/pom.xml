@@ -30,6 +30,10 @@
             <groupId>com.kaiming</groupId>
             <artifactId>xiaohongshu-distributed-id-generator-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.kaiming</groupId>
+            <artifactId>xiaohongshu-count-api</artifactId>
+        </dependency>
         <!-- 业务接口日志组件 -->
         <dependency>
             <groupId>com.kaiming</groupId>

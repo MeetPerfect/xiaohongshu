@@ -2,6 +2,8 @@ package com.kaiming.xiaohongshu.user.biz.controller;
 
 import com.kaiming.framework.biz.operationlog.aspect.ApiOperationLog;
 import com.kaiming.framework.common.response.Response;
+import com.kaiming.xiaohongshu.user.biz.model.vo.FindUserProfileReqVO;
+import com.kaiming.xiaohongshu.user.biz.model.vo.FindUserProfileRespVO;
 import com.kaiming.xiaohongshu.user.biz.model.vo.UpdateUserInfoReqVO;
 import com.kaiming.xiaohongshu.user.biz.service.UserService;
 import com.kaiming.xiaohongshu.user.dto.req.*;
@@ -82,5 +84,11 @@ public class UserController {
     @ApiOperationLog(description = "批量查询用户信息")
     public Response<List<FindUserByIdRespDTO>> findByIds(@RequestBody FindUsersByIdsReqDTO findUsersByIdsReqDTO) {
         return userService.findByIds(findUsersByIdsReqDTO);
+    }
+    
+    @PostMapping("/profile")
+    @ApiOperationLog(description = "查询用户简介")
+    public Response<FindUserProfileRespVO> findUserProfile(@RequestBody FindUserProfileReqVO findUserProfileReqVO) {
+        return userService.findUserProfile(findUserProfileReqVO);
     }
 }

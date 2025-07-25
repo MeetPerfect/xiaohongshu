@@ -1,6 +1,8 @@
 package com.kaiming.xiaohongshu.user.biz.service;
 
 import com.kaiming.framework.common.response.Response;
+import com.kaiming.xiaohongshu.user.biz.model.vo.FindUserProfileReqVO;
+import com.kaiming.xiaohongshu.user.biz.model.vo.FindUserProfileRespVO;
 import com.kaiming.xiaohongshu.user.biz.model.vo.UpdateUserInfoReqVO;
 import com.kaiming.xiaohongshu.user.dto.req.*;
 import com.kaiming.xiaohongshu.user.dto.resp.FindUserByIdRespDTO;
@@ -60,4 +62,11 @@ public interface UserService {
      * @return
      */
     Response<List<FindUserByIdRespDTO>> findByIds(FindUsersByIdsReqDTO findUsersByIdsReqDTO);
+
+    /**
+     * 查询用户简介
+     * @param findUserProfileReqVO
+     * @return
+     */
+    Response<FindUserProfileRespVO> findUserProfile(FindUserProfileReqVO  findUserProfileReqVO);
 }

@@ -11,8 +11,11 @@ import com.kaiming.framework.common.enums.DeleteEnum;
 import com.kaiming.framework.common.enums.StatusEnum;
 import com.kaiming.framework.common.exception.BizException;
 import com.kaiming.framework.common.response.Response;
+import com.kaiming.framework.common.util.DateUtils;
 import com.kaiming.framework.common.util.JsonUtils;
+import com.kaiming.framework.common.util.NumberUtils;
 import com.kaiming.framework.common.util.ParamUtils;
+import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdRespDTO;
 import com.kaiming.xiaohongshu.oss.api.FileFeignApi;
 import com.kaiming.xiaohongshu.user.biz.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.user.biz.constant.RoleConstants;
@@ -24,7 +27,10 @@ import com.kaiming.xiaohongshu.user.biz.domain.mapper.UserDOMapper;
 import com.kaiming.xiaohongshu.user.biz.domain.mapper.UserRoleDOMapper;
 import com.kaiming.xiaohongshu.user.biz.enums.ResponseCodeEnum;
 import com.kaiming.xiaohongshu.user.biz.enums.SexEnum;
+import com.kaiming.xiaohongshu.user.biz.model.vo.FindUserProfileReqVO;
+import com.kaiming.xiaohongshu.user.biz.model.vo.FindUserProfileRespVO;
 import com.kaiming.xiaohongshu.user.biz.model.vo.UpdateUserInfoReqVO;
+import com.kaiming.xiaohongshu.user.biz.rpc.CountRpcService;
 import com.kaiming.xiaohongshu.user.biz.rpc.DistributedIdGeneratorRpcService;
 import com.kaiming.xiaohongshu.user.biz.rpc.OssRpcService;
 import com.kaiming.xiaohongshu.user.biz.service.UserService;
@@ -34,8 +40,6 @@ import com.kaiming.xiaohongshu.user.dto.resp.FindUserByPhoneRespDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.K;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
@@ -80,6 +84,8 @@ public class UserServiceImpl implements UserService {
     private DistributedIdGeneratorRpcService distributedIdGeneratorRpcService;
     @Resource(name = "taskExecutor")
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    @Resource
+    private CountRpcService countRpcService;
 
     private static final Cache<Long, FindUserByIdRespDTO> LOCAL_CACHE = Caffeine.newBuilder()
             .initialCapacity(10000)
@@ -446,5 +452,57 @@ public class UserServiceImpl implements UserService {
             findUserByIdRespDTOS.addAll(findUserByIdRespDTOS2);
         }
         return Response.success(findUserByIdRespDTOS);
+    }
+
+    /**
+     * 查询用户简介
+     * @param findUserProfileReqVO
+     * @return
+     */
+    @Override
+    public Response<FindUserProfileRespVO> findUserProfile(FindUserProfileReqVO findUserProfileReqVO) {
+        // 用户Id
+        Long userId = findUserProfileReqVO.getUserId();
+        // 若入参中用户 ID 为空，则查询当前登录用户
+        if(Objects.isNull(userId)){
+            userId = LoginUserContextHolder.getUserId();
+        }
+
+        // TODO 1. 优先查询缓存
+
+        // TODO 2. 再查询数据库
+        UserDO userDO = userDOMapper.selectByPrimaryKey(userId);
+        if (Objects.isNull(userDO)){
+            throw new BizException(ResponseCodeEnum.USER_NOT_FOUND);
+        }
+        FindUserProfileRespVO findUserProfileRespVO = FindUserProfileRespVO.builder()
+                .userId(userId)
+                .avatar(userDO.getAvatar())
+                .nickname(userDO.getNickname())
+                .xiaohongshuId(userDO.getXiaohongshuId())
+                .sex(userDO.getSex())
+                .introduction(userDO.getIntroduction())
+                .build();
+        // 年龄计算
+        LocalDate birthday = userDO.getBirthday();
+        findUserProfileRespVO.setAge(Objects.isNull(birthday) ? 0 : DateUtils.calculateAge(birthday));
+        // Rpc Feign 调用计数服务
+        FindUserCountsByIdRespDTO findUserCountsByIdRspDTO  = countRpcService.findUserCountById(userId);
+        
+        if (Objects.nonNull(findUserCountsByIdRspDTO)) {
+            Long fansTotal = findUserCountsByIdRspDTO.getFansTotal();
+            Long followingTotal = findUserCountsByIdRspDTO.getFollowingTotal();
+            Long likeTotal = findUserCountsByIdRspDTO.getLikeTotal();
+            Long noteTotal = findUserCountsByIdRspDTO.getNoteTotal();
+            Long collectTotal = findUserCountsByIdRspDTO.getCollectTotal();
+            
+            findUserProfileRespVO.setFansTotal(NumberUtils.formatNumberString(fansTotal));
+            findUserProfileRespVO.setFollowingTotal(NumberUtils.formatNumberString(followingTotal));
+            findUserProfileRespVO.setLikeTotal(NumberUtils.formatNumberString(likeTotal));
+            findUserProfileRespVO.setLikeAndCollectTotal(NumberUtils.formatNumberString(likeTotal + collectTotal));
+            findUserProfileRespVO.setCollectTotal(NumberUtils.formatNumberString(collectTotal));
+            findUserProfileRespVO.setNoteTotal(NumberUtils.formatNumberString(noteTotal));
+        }
+        return Response.success(findUserProfileRespVO);
     }
 }

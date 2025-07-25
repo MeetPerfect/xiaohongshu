@@ -80,9 +80,6 @@
 
         <nacos-config.version>0.3.0-RC</nacos-config.version>
         <transmittable-thread-local.version>2.14.2</transmittable-thread-local.version>
-
-        <minio.version>8.2.1</minio.version>
-
         <minio.version>8.2.1</minio.version>
         <aliyun-sdk-oss.version>3.17.4</aliyun-sdk-oss.version>
         <jaxb-api.version>2.3.1</jaxb-api.version>

@@ -83,4 +83,10 @@ public class NoteController {
     public Response<?> unCollectNote(@RequestBody UnCollectNoteReqVO unCollectNoteReqVO) {
         return noteService.unCollectNote(unCollectNoteReqVO);
     }
+    
+    @PostMapping("/published/list")
+    @ApiOperationLog(description = "用户主页-已发布笔记列表")
+    public Response<FindPublishedNoteListRespVO> findPublishedNoteList(@RequestBody FindPublishedNoteListReqVO findPublishedNoteListReqVO) {
+        return noteService.findPublishedNoteList(findPublishedNoteListReqVO);
+    }
 }

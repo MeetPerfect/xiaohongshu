@@ -94,4 +94,11 @@ public interface NoteService {
      * @return
      */
     Response<?> unCollectNote(UnCollectNoteReqVO unCollectNoteReqVO);
+
+    /**
+     * 用户主页 - 查询已发布的笔记列表
+     * @param findPublishedNoteListReqVO
+     * @return
+     */
+    Response<FindPublishedNoteListRespVO> findPublishedNoteList(FindPublishedNoteListReqVO findPublishedNoteListReqVO);
 }

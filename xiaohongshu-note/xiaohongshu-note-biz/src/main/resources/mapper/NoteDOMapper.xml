@@ -37,6 +37,15 @@
     <select id="selectCreatorIdByNoteId" resultType="long">
       select creator_id from t_note where id = #{noteId} and status = 1
     </select>
+    <select id="selectPublishedNoteListByUserIdAndCursor" resultMap="BaseResultMap">
+      select id, title, creator_id, is_top, type, img_uris, video_uri from t_note
+      where creator_id = #{creatorId} and visible = 0 and status = 1
+      <if test="cursor != null">
+        <![CDATA[ and id < #{cursor} ]]>
+      </if>
+      order by id desc 
+      limit 20
+    </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_note
     where id = #{id,jdbcType=BIGINT}

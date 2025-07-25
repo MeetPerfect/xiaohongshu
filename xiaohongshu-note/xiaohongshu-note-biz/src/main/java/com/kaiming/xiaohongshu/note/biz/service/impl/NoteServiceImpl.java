@@ -49,10 +49,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -205,7 +202,7 @@ public class NoteServiceImpl implements NoteService {
                 keyValueRpcService.deleteNoteContent(contentUuid);
             }
         }
-        
+
         // 发送 MQ
         // 构建消息体
         NoteOperateMqDTO noteOperateMqDTO = NoteOperateMqDTO.builder()
@@ -537,7 +534,7 @@ public class NoteServiceImpl implements NoteService {
         // 同步广播
         rocketMQTemplate.syncSend(MQConstants.TOPIC_DELETE_NOTE_LOCAL_CACHE, noteId);
         log.info("====> MQ：删除笔记本地缓存发送成功...");
-        
+
         // 发送 MQ
         // 构建消息体
         NoteOperateMqDTO noteOperateMqDTO = NoteOperateMqDTO.builder()
@@ -1117,6 +1114,70 @@ public class NoteServiceImpl implements NoteService {
         });
 
         return Response.success();
+    }
+
+    /**
+     * 查询已发布的笔记列表
+     *
+     * @param findPublishedNoteListReqVO
+     * @return
+     */
+    @Override
+    public Response<FindPublishedNoteListRespVO> findPublishedNoteList(FindPublishedNoteListReqVO findPublishedNoteListReqVO) {
+        // 用户Id
+        Long userId = findPublishedNoteListReqVO.getUserId();
+        // 游标
+        Long cursor = findPublishedNoteListReqVO.getCursor();
+        // TODO: 优先查询缓存
+
+        // 缓存无，则查询数据库
+        List<NoteDO> noteDOS = noteDOMapper.selectPublishedNoteListByUserIdAndCursor(userId, cursor);
+        // 返回参数
+        FindPublishedNoteListRespVO findPublishedNoteListRespVO = null;
+        if (CollUtil.isNotEmpty(noteDOS)) {
+            // DO 转 VO
+            List<NoteItemRespVO> noteVOS = noteDOS.stream()
+                    .map(noteDO -> {
+                        // 获取封面图片
+                        String cover = StringUtils.isNotBlank(noteDO.getImgUris()) ?
+                                StringUtils.split(noteDO.getImgUris(), ",")[0] : null;
+
+                        NoteItemRespVO noteItemRespVO = NoteItemRespVO.builder()
+                                .noteId(noteDO.getId())
+                                .type(noteDO.getType())
+                                .creatorId(noteDO.getCreatorId())
+                                .cover(cover)
+                                .videoUri(noteDO.getVideoUri())
+                                .title(noteDO.getTitle())
+                                .build();
+                        return noteItemRespVO;
+                    }).toList();
+            // Feign 调用用户服务，获取博主的用户头像、昵称
+            Optional<Long> creatorIdOptional = noteDOS.stream().map(NoteDO::getCreatorId).findAny();
+            FindUserByIdRespDTO findUserByIdRespDTO  = userRpcService.findById(creatorIdOptional.get());
+            if (Objects.nonNull(creatorIdOptional)) {
+                // 循环 VO 集合，分别设置头像、昵称
+                noteVOS.forEach(noteItem -> {
+                    noteItem.setAvatar(findUserByIdRespDTO.getAvatar());
+                    noteItem.setNickname(findUserByIdRespDTO.getNickName());
+                });
+            }
+
+            // TODO: Feign 调用计数服务，批量获取笔记点赞数
+
+            // 过滤出最早发布的笔记 ID，充当下一页的游标
+            Optional<Long> earliestNoteId = noteDOS.stream().map(NoteDO::getId).min(Long::compareTo);
+            findPublishedNoteListRespVO = FindPublishedNoteListRespVO.builder()
+                    .notes(noteVOS)
+                    .nextCursor(earliestNoteId.orElse(null))
+                    .build();
+
+        }
+        // TODO: Feign 调用用户服务，获取用户头像、昵称
+        
+        // TODO: Feign 调用计数服务，批量获取笔记点赞数
+
+        return Response.success(findPublishedNoteListRespVO);
     }
 
     /**

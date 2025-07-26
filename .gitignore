@@ -16,7 +16,7 @@ bin/
 *.lock
 rebel.xml
 **/application-dev.yml
-
+**/*.flattened-pom.xml
 
 ### NetBeans ###
 /nbproject/private/

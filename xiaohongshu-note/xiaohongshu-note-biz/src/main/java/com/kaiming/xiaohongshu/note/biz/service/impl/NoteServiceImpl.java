@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.kaiming.framework.biz.context.holder.LoginUserContextHolder;
 import com.kaiming.framework.common.exception.BizException;
 import com.kaiming.framework.common.response.Response;
@@ -566,11 +567,11 @@ public class NoteServiceImpl implements NoteService {
                 .updateTime(LocalDateTime.now())
                 .build();
         noteDOMapper.updateByPrimaryKeySelective(noteDO);
-        
+
         // todo 对笔记细节noteDetailRedisKey需要做延迟双删
         // 延迟双删
         sendDelayDeleteRedisPublishedNoteListCacheMQ(currUserId);
-        
+
         // 同步广播
         rocketMQTemplate.syncSend(MQConstants.TOPIC_DELETE_NOTE_LOCAL_CACHE, noteId);
         log.info("====> MQ：删除笔记本地缓存发送成功...");
@@ -1187,6 +1188,11 @@ public class NoteServiceImpl implements NoteService {
                     // 过滤出最早发布的笔记 ID，充当下一页的游标 (Redis缓存中存的是第一页数据)
                     Optional<Long> earliestNoteId = noteItemRespVOS.stream()
                             .map(NoteItemRespVO::getNoteId).min(Long::compareTo);
+
+                    // 如果是博主本人，需要调用计数服务，获取最新的点赞数据
+                    getAndSetLatestLikeTotalIfAuthor(userId, sortedList);
+                    // 批量获取笔记的点赞状态
+                    batchGetAndSetNoteIsLiked(sortedList);
                     findPublishedNoteListRespVO = FindPublishedNoteListRespVO.builder()
                             .notes(sortedList)
                             .nextCursor(earliestNoteId.orElse(null))
@@ -1208,15 +1214,15 @@ public class NoteServiceImpl implements NoteService {
                         String cover = StringUtils.isNotBlank(noteDO.getImgUris()) ?
                                 StringUtils.split(noteDO.getImgUris(), ",")[0] : null;
 
-                        NoteItemRespVO noteItemRespVO = NoteItemRespVO.builder()
+                        return NoteItemRespVO.builder()
                                 .noteId(noteDO.getId())
                                 .type(noteDO.getType())
                                 .creatorId(noteDO.getCreatorId())
                                 .cover(cover)
                                 .videoUri(noteDO.getVideoUri())
                                 .title(noteDO.getTitle())
+                                .isLiked(false)
                                 .build();
-                        return noteItemRespVO;
                     }).toList();
             // Feign 调用用户服务，获取博主的用户头像、昵称
             CompletableFuture<FindUserByIdRespDTO> userFuture = CompletableFuture
@@ -1245,19 +1251,10 @@ public class NoteServiceImpl implements NoteService {
                         noteItem.setNickname(findUserByIdRespDTO.getNickName());
                     });
                 }
-
-                if (CollUtil.isNotEmpty(findNoteCountByIdRespDTOS)) {
-                    // DTO 转 Map
-                    Map<Long, FindNoteCountByIdRespDTO> noteIdAndDTOMap = findNoteCountByIdRespDTOS.stream()
-                            .collect(Collectors.toMap(FindNoteCountByIdRespDTO::getNoteId, dto -> dto));
-                    // 循环设置 VO 集合，设置每篇笔记的点赞量
-                    noteVOS.forEach(noteItemRespVO -> {
-                        Long noteId = noteItemRespVO.getNoteId();
-                        FindNoteCountByIdRespDTO findNoteCountByIdRespDTO = noteIdAndDTOMap.get(noteId);
-                        noteItemRespVO.setLikeTotal((Objects.nonNull(findNoteCountByIdRespDTO) && Objects.nonNull(findNoteCountByIdRespDTO.getLikeTotal())) ?
-                                NumberUtils.formatNumberString(findNoteCountByIdRespDTO.getLikeTotal()) : "0");
-                    });
-                }
+                // 设置笔记点赞数据
+                setVOListLikeTotal(findNoteCountByIdRespDTOS, noteVOS);
+                // 批量获取笔记的点赞状态
+                batchGetAndSetNoteIsLiked(noteVOS);
             } catch (Exception e) {
                 log.error("## 并发调用错误: ", e);
             }
@@ -1274,6 +1271,102 @@ public class NoteServiceImpl implements NoteService {
             }
         }
         return Response.success(findPublishedNoteListRespVO);
+    }
+
+    /**
+     * 批量获取笔记点赞状态
+     *
+     * @param noteItemRespVOS
+     */
+    private void batchGetAndSetNoteIsLiked(List<NoteItemRespVO> noteItemRespVOS) {
+        // 当前登录用户
+        Long userId = LoginUserContextHolder.getUserId();
+        // 若用户已登录
+        if (Objects.nonNull(userId)) {
+            // 提取所有需要获取点赞状态的笔记 ID
+            List<Long> noteIds = noteItemRespVOS.stream().map(NoteItemRespVO::getNoteId).toList();
+            // 构建 Roaring Bitmap Key
+            String rbitmapUserNoteLikeListKey = RedisKeyConstants.buildRBitmapUserNoteLikeListKey(userId);
+
+            DefaultRedisScript<List> script = new DefaultRedisScript<>();
+            script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_batch_get_note_liked.lua")));
+            script.setResultType(List.class);
+            // 执行 Lua 脚本，拿到返回结果
+            List<Long> result = redisTemplate.execute(script,
+                    Collections.singletonList(rbitmapUserNoteLikeListKey), noteIds.toArray());
+            // 若 Redis 中缓存不存在，下标 0 存放的标识为 -1
+            Long hashKey = result.get(0);
+            // 若 Roaring Bitmap 不存在
+            if (Objects.equals(hashKey, NoteLikeLuaResultEnum.NOT_EXIST.getCode())) {
+                // 数据库查询
+                List<NoteLikeDO> noteLikeDOS = noteLikeDOMapper.selectByUserIdAndNoteId(userId, noteIds);
+                if (CollUtil.isEmpty(noteLikeDOS)) return;
+
+                // DO 转 Map, 方便查询对应笔记是否点赞
+                Map<Long, NoteLikeDO> noteIdIsLikedMap = noteLikeDOS.stream()
+                        .collect(Collectors.toMap(NoteLikeDO::getNoteId, notelikeDO -> notelikeDO));
+                // 循环 VO 集合，设置是否点赞
+                noteItemRespVOS.forEach(noteItem -> {
+                    Long currNoteId = noteItem.getNoteId();
+                    NoteLikeDO noteLikeDO = noteIdIsLikedMap.get(currNoteId);
+                    if (Objects.nonNull(noteLikeDO)) noteItem.setIsLiked(true);
+                });
+                // 再异步初始化 Roaring Bitmap
+                threadPoolTaskExecutor.submit(() -> {
+                    // 过期时间
+                    long expireSeconds = 60 * 30 + RandomUtil.randomInt(60 * 30);
+                    batchAddNoteLike2RBitmapAndExpire(userId, expireSeconds, rbitmapUserNoteLikeListKey);
+                });
+                return;
+            }
+            // 否则，则 Roaring Bitmap 存在
+            // 初始化一个字典，解析 Lua 结果，并设置每篇笔记是否被点赞
+            Map<Long, Boolean> likedMap = Maps.newHashMapWithExpectedSize(noteIds.size());
+            for (int i = 0; i < noteIds.size(); i++) {
+                Long noteId = noteIds.get(i);
+                boolean isLiked = Objects.equals(result.get(i), 1L);
+                likedMap.put(noteId, isLiked);
+            }
+            
+            // 循环 VO 集合，设置是否点赞
+            noteItemRespVOS.forEach(noteItem -> {
+                Long noteId = noteItem.getNoteId();
+                noteItem.setIsLiked(likedMap.get(noteId));
+            });
+        }
+    }
+
+    private static void setVOListLikeTotal(List<FindNoteCountByIdRespDTO> findNoteCountByIdRespDTOS, List<NoteItemRespVO> noteVOS) {
+        if (CollUtil.isNotEmpty(findNoteCountByIdRespDTOS)) {
+            // DTO 转 Map
+            Map<Long, FindNoteCountByIdRespDTO> noteIdAndDTOMap = findNoteCountByIdRespDTOS.stream()
+                    .collect(Collectors.toMap(FindNoteCountByIdRespDTO::getNoteId, dto -> dto));
+            // 循环设置 VO 集合，设置每篇笔记的点赞量
+            noteVOS.forEach(noteItemRespVO -> {
+                Long noteId = noteItemRespVO.getNoteId();
+                FindNoteCountByIdRespDTO findNoteCountByIdRespDTO = noteIdAndDTOMap.get(noteId);
+                noteItemRespVO.setLikeTotal((Objects.nonNull(findNoteCountByIdRespDTO) && Objects.nonNull(findNoteCountByIdRespDTO.getLikeTotal())) ?
+                        NumberUtils.formatNumberString(findNoteCountByIdRespDTO.getLikeTotal()) : "0");
+            });
+        }
+    }
+
+    /**
+     * 当前用户查询笔记发布，获取笔记列表的点赞数据
+     *
+     * @param userId
+     * @param sortedList
+     */
+    private void getAndSetLatestLikeTotalIfAuthor(Long userId, List<NoteItemRespVO> sortedList) {
+        // 登录用户Id
+        Long loginUserId = LoginUserContextHolder.getUserId();
+        if (Objects.nonNull(loginUserId) && Objects.equals(loginUserId, userId)) {
+            List<Long> noteIds = sortedList.stream().map(NoteItemRespVO::getNoteId).toList();
+            List<FindNoteCountByIdRespDTO> findNoteCountsByIdRespDTOS = countRpcService.findNoteCountByIds(noteIds);
+
+            // 设置笔记计数数据
+            setVOListLikeTotal(findNoteCountsByIdRespDTOS, sortedList);
+        }
     }
 
     /**

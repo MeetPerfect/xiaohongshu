@@ -12,6 +12,8 @@ import com.kaiming.framework.common.exception.BizException;
 import com.kaiming.framework.common.response.Response;
 import com.kaiming.framework.common.util.DateUtils;
 import com.kaiming.framework.common.util.JsonUtils;
+import com.kaiming.framework.common.util.NumberUtils;
+import com.kaiming.xiaohongshu.count.dto.FindNoteCountByIdRespDTO;
 import com.kaiming.xiaohongshu.note.biz.constant.MQConstants;
 import com.kaiming.xiaohongshu.note.biz.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteCollectionDO;
@@ -26,6 +28,7 @@ import com.kaiming.xiaohongshu.note.biz.model.dto.CollectUnCollectNoteMqDTO;
 import com.kaiming.xiaohongshu.note.biz.model.dto.LikeUnlikeNoteMqDTO;
 import com.kaiming.xiaohongshu.note.biz.model.dto.NoteOperateMqDTO;
 import com.kaiming.xiaohongshu.note.biz.model.vo.*;
+import com.kaiming.xiaohongshu.note.biz.rpc.CountRpcService;
 import com.kaiming.xiaohongshu.note.biz.rpc.DistributedIdGeneratorRpcService;
 import com.kaiming.xiaohongshu.note.biz.rpc.KeyValueRpcService;
 import com.kaiming.xiaohongshu.note.biz.rpc.UserRpcService;
@@ -52,6 +55,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * ClassName: NoteServiceImpl
@@ -86,6 +90,8 @@ public class NoteServiceImpl implements NoteService {
     private NoteLikeDOMapper noteLikeDOMapper;
     @Resource
     private NoteCollectionDOMapper noteCollectionDOMapper;
+    @Resource
+    private CountRpcService countRpcService;
     /**
      * 本地缓存，使用 Caffeine 实现
      */
@@ -1153,30 +1159,55 @@ public class NoteServiceImpl implements NoteService {
                         return noteItemRespVO;
                     }).toList();
             // Feign 调用用户服务，获取博主的用户头像、昵称
-            Optional<Long> creatorIdOptional = noteDOS.stream().map(NoteDO::getCreatorId).findAny();
-            FindUserByIdRespDTO findUserByIdRespDTO  = userRpcService.findById(creatorIdOptional.get());
-            if (Objects.nonNull(creatorIdOptional)) {
-                // 循环 VO 集合，分别设置头像、昵称
-                noteVOS.forEach(noteItem -> {
-                    noteItem.setAvatar(findUserByIdRespDTO.getAvatar());
-                    noteItem.setNickname(findUserByIdRespDTO.getNickName());
-                });
+            CompletableFuture<FindUserByIdRespDTO> userFuture = CompletableFuture
+                    .supplyAsync(() -> {
+                        Optional<Long> creatorIdOptional = noteDOS.stream().map(NoteDO::getCreatorId).findAny();
+                        return userRpcService.findById(creatorIdOptional.get());
+                    }, threadPoolTaskExecutor);
+            
+            // Feign 调用计数服务，批量获取笔记点赞数
+            CompletableFuture<List<FindNoteCountByIdRespDTO>> noteCountFuture = CompletableFuture
+                    .supplyAsync(() -> {
+                        List<Long> noteIds = noteDOS.stream().map(NoteDO::getId).toList();
+                        return countRpcService.findNoteCountByIds(noteIds);
+                    }, threadPoolTaskExecutor);
+            // 等待所有任务完成，并合并结果
+            CompletableFuture.allOf(userFuture, noteCountFuture).join();
+            
+            try{
+                // 获取 Future 返回结果
+                FindUserByIdRespDTO findUserByIdRespDTO = userFuture.get();
+                List<FindNoteCountByIdRespDTO> findNoteCountByIdRespDTOS = noteCountFuture.get();
+                if (Objects.nonNull(findUserByIdRespDTO)) {
+                    // 循环 VO 集合，分别设置头像、昵称
+                    noteVOS.forEach(noteItem -> {
+                        noteItem.setAvatar(findUserByIdRespDTO.getAvatar());
+                        noteItem.setNickname(findUserByIdRespDTO.getNickName());
+                    });
+                }
+
+                if (CollUtil.isNotEmpty(findNoteCountByIdRespDTOS)) {
+                    // DTO 转 Map
+                    Map<Long, FindNoteCountByIdRespDTO> noteIdAndDTOMap = findNoteCountByIdRespDTOS.stream()
+                            .collect(Collectors.toMap(FindNoteCountByIdRespDTO::getNoteId, dto -> dto));
+                    // 循环设置 VO 集合，设置每篇笔记的点赞量
+                    noteVOS.forEach(noteItemRespVO  -> {
+                        Long noteId = noteItemRespVO.getNoteId();
+                        FindNoteCountByIdRespDTO findNoteCountByIdRespDTO = noteIdAndDTOMap.get(noteId);
+                        noteItemRespVO.setLikeTotal((Objects.nonNull(findNoteCountByIdRespDTO) && Objects.nonNull(findNoteCountByIdRespDTO.getLikeTotal())) ?
+                                NumberUtils.formatNumberString(findNoteCountByIdRespDTO.getLikeTotal()) : "0");
+                    });
+                }
+            } catch (Exception e){
+                log.error("## 并发调用错误: ", e);
             }
-
-            // TODO: Feign 调用计数服务，批量获取笔记点赞数
-
             // 过滤出最早发布的笔记 ID，充当下一页的游标
             Optional<Long> earliestNoteId = noteDOS.stream().map(NoteDO::getId).min(Long::compareTo);
             findPublishedNoteListRespVO = FindPublishedNoteListRespVO.builder()
                     .notes(noteVOS)
                     .nextCursor(earliestNoteId.orElse(null))
                     .build();
-
         }
-        // TODO: Feign 调用用户服务，获取用户头像、昵称
-        
-        // TODO: Feign 调用计数服务，批量获取笔记点赞数
-
         return Response.success(findPublishedNoteListRespVO);
     }
 

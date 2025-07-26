@@ -43,8 +43,10 @@ public class NoteCountServiceImpl implements NoteCountService {
     private RedisTemplate<String, Object> redisTemplate;
     @Resource
     private NoteCountDOMapper noteCountDOMapper;
+
     /**
      * 批量查询笔记计数
+     *
      * @param findNoteCountByIdReqDTO
      * @return
      */
@@ -61,7 +63,7 @@ public class NoteCountServiceImpl implements NoteCountService {
         List<Object> countHashes = getCountHashesByPipelineFromRedis(hashKeys);
 
         // 返参 DTO
-        List<FindNoteCountByIdRespDTO>  findNoteCountsByIdRespDTOS = Lists.newArrayList();
+        List<FindNoteCountByIdRespDTO> findNoteCountsByIdRespDTOS = Lists.newArrayList();
 
         // 用于存储缓存中不存在，需要查数据库的笔记 ID
         List<Long> noteIdsNeedQuery = Lists.newArrayList();
@@ -100,9 +102,9 @@ public class NoteCountServiceImpl implements NoteCountService {
             Map<Long, NoteCountDO> noteIdAndDOMap = noteCountDOS.stream()
                     .collect(Collectors.toMap(NoteCountDO::getNoteId, noteCountDO -> noteCountDO));
 
-            // TODO: 将笔记 Hash 计数同步到 Redis 中
+            // 将笔记 Hash 计数同步到 Redis 中
             syncNoteHash2Redis(findNoteCountsByIdRespDTOS, noteIdAndDOMap);
-            
+
             // 针对 DTO 中为 null 的计数字段，循环设置从数据库中查询到的计数
             for (FindNoteCountByIdRespDTO findNoteCountsByIdRespDTO : findNoteCountsByIdRespDTOS) {
                 Long noteId = findNoteCountsByIdRespDTO.getNoteId();
@@ -110,21 +112,24 @@ public class NoteCountServiceImpl implements NoteCountService {
                 Long collectTotal = findNoteCountsByIdRespDTO.getCollectTotal();
                 Long commentTotal = findNoteCountsByIdRespDTO.getCommentTotal();
 
+                NoteCountDO noteCountDO = noteIdAndDOMap.get(noteId);
+
                 if (Objects.isNull(likeTotal))
-                    findNoteCountsByIdRespDTO.setLikeTotal(noteIdAndDOMap.get(noteId).getLikeTotal());
+                    findNoteCountsByIdRespDTO.setLikeTotal(Objects.nonNull(likeTotal) ? noteCountDO.getLikeTotal() : null);
                 if (Objects.isNull(collectTotal))
-                    findNoteCountsByIdRespDTO.setCollectTotal(noteIdAndDOMap.get(noteId).getCollectTotal());
+                    findNoteCountsByIdRespDTO.setCollectTotal(Objects.nonNull(collectTotal) ? noteCountDO.getCollectTotal() : null);
                 if (Objects.isNull(commentTotal))
-                    findNoteCountsByIdRespDTO.setCommentTotal(noteIdAndDOMap.get(noteId).getCommentTotal());
+                    findNoteCountsByIdRespDTO.setCommentTotal(Objects.nonNull(commentTotal) ? noteCountDO.getCommentTotal() : null);
             }
-            
+
         }
-        
+
         return Response.success(findNoteCountsByIdRespDTOS);
     }
 
     /**
      * 将笔记 Hash 计数同步到 Redis 中
+     *
      * @param findNoteCountsByIdRespDTOS
      * @param noteIdAndDOMap
      */
@@ -132,13 +137,13 @@ public class NoteCountServiceImpl implements NoteCountService {
         // 将笔记计数同步到 Redis 中
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
-            public  Object execute(RedisOperations operations) throws DataAccessException {
+            public Object execute(RedisOperations operations) throws DataAccessException {
                 // 循环已构建好的返参 DTO 集合
                 for (FindNoteCountByIdRespDTO findNoteCountsByIdRespDTO : findNoteCountsByIdRespDTOS) {
                     Long likeTotal = findNoteCountsByIdRespDTO.getLikeTotal();
                     Long collectTotal = findNoteCountsByIdRespDTO.getCollectTotal();
                     Long commentTotal = findNoteCountsByIdRespDTO.getCommentTotal();
-                    
+
                     // 若当前 DTO 的所有计数都不为空，则无需同步 Hash
                     if (Objects.nonNull(likeTotal) && Objects.nonNull(collectTotal) && Objects.nonNull(commentTotal)) {
                         continue;
@@ -151,19 +156,22 @@ public class NoteCountServiceImpl implements NoteCountService {
                     NoteCountDO noteCountDO = noteIdAndDOMap.get(noteId);
 
                     if (Objects.isNull(likeTotal)) {
-                        countMap.put(RedisKeyConstants.FIELD_LIKE_TOTAL, noteCountDO.getLikeTotal());
+                        countMap.put(RedisKeyConstants.FIELD_LIKE_TOTAL,
+                                Objects.nonNull(noteCountDO) ? noteCountDO.getLikeTotal() : null);
                     }
                     if (Objects.isNull(collectTotal)) {
-                        countMap.put(RedisKeyConstants.FIELD_COLLECT_TOTAL, noteCountDO.getCollectTotal());
+                        countMap.put(RedisKeyConstants.FIELD_COLLECT_TOTAL, 
+                                Objects.nonNull(noteCountDO) ? noteCountDO.getCollectTotal() : null);
                     }
                     if (Objects.isNull(commentTotal)) {
-                        countMap.put(RedisKeyConstants.FIELD_COMMENT_TOTAL, noteCountDO.getCommentTotal());
+                        countMap.put(RedisKeyConstants.FIELD_COMMENT_TOTAL,
+                                Objects.nonNull(noteCountDO) ? noteCountDO.getCommentTotal() : null);
                     }
                     // 批量添加 Hash 的计数 Field
                     operations.opsForHash().putAll(noteCountHashKey, countMap);
 
                     // 设置随机过期时间 (1小时以内)
-                    long expireTime = 60*30 + RandomUtil.randomInt(60 * 30);
+                    long expireTime = 60 * 30 + RandomUtil.randomInt(60 * 30);
                     operations.expire(noteCountHashKey, expireTime, TimeUnit.SECONDS);
                 }
 
@@ -174,6 +182,7 @@ public class NoteCountServiceImpl implements NoteCountService {
 
     /**
      * 从 Redis 中批量查询笔记 Hash 计数
+     *
      * @param hashKeys
      * @return
      */

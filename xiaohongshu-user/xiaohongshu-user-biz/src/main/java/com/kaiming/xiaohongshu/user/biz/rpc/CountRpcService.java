@@ -23,7 +23,12 @@ public class CountRpcService {
     
     @Resource
     private CountFeignApi countFeignApi;
-    
+
+    /**
+     * 批量查询用户计数
+     * @param userId
+     * @return
+     */
     public FindUserCountsByIdRespDTO  findUserCountById(Long userId) {
         FindUserCountsByIdReqDTO findUserCountsByIdReqDTO = new FindUserCountsByIdReqDTO();
         findUserCountsByIdReqDTO.setUserId(userId);

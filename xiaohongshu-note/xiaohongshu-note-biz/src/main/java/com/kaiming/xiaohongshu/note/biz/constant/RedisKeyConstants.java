@@ -46,6 +46,11 @@ public class RedisKeyConstants {
     public static final String R_BITMAP_USER_NOTE_COLLECT_LIST_KEY = "rbitmap:note:collects:";
 
     /**
+     * 已发布笔记列表 KEY 前缀
+     */
+    private static final String PUBLISHED_NOTE_LIST_KEY = "note:published:list:";
+
+    /**
      * 构建完整的笔记详情 KEY
      *
      * @param noteId
@@ -105,6 +110,15 @@ public class RedisKeyConstants {
     
     public static String buildRBitmapUserNoteCollectListKey(Long userId) {
         return R_BITMAP_USER_NOTE_COLLECT_LIST_KEY + userId;
+    }
+
+    /**
+     * 构建完整的已发布笔记列表 KEY
+     * @param userId
+     * @return
+     */
+    public static String buildPublishedNoteListKey(Long userId) {
+        return PUBLISHED_NOTE_LIST_KEY + userId;
     }
     
 }

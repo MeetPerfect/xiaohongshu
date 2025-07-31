@@ -7,7 +7,7 @@
 
 ## 项目简介
 
-
+仿小红书社区项目，主要包括笔记发布、点赞、收藏、关注等功能。平台需要满足海量用户的高并发读写 和数据一致性要求，确保用户操作的实时响应，并通过分布式架构实现高可用和高扩展性。
 
 ## 环境搭建
 
@@ -73,7 +73,44 @@
 
 ## 项目组织结构
 
-
+```java
+|---xiaohongshu
+    |---xiaohonghsu-user-relation		-- 用户关系模块
+    |   |---xiaohongshu-user-relation-api		-- 用户关系,RPC层,供其他服务调用
+    |   |---xiaohongshu-user-relation-biz		-- 用户关系业务模块
+    |---xiaohongshu-auth			-- 用户认证模块
+    |---xiaohongshu-comment			-- 评论模块
+    |   |---xiaohongshu-comment-api		-- 评论,RPC层,供其他服务调用
+    |   |---xiaohongshu-comment-biz		-- 评论业务模块
+    |---xiaohongshu-count			-- 计数模块
+    |   |---xiaohongshu-count-api		-- 计数,RPC层,供其他服务调用
+    |   |---xiaohongshu-count-biz		-- 计数业务模块
+    |---xiaohongshu-data-align			-- 数据对齐模块
+    |---xiaohongshu-distributed-id-generator		-- 分布式Id模块
+    |   |---xiaohongshu-distributed-id-generator-api		-- 分布式Id生成,RPC层,供其他服务调用
+    |   |---xiaohongshu-distributed-id-generator-biz		-- 分布式Id生成业务模块
+    |---xiaohongshu-framework		-- 平台基础设施层模块-封装一些常用功能，供各个业务线拿来即用		
+    |   |---xiaohongshu-common			-- 平台通用模块，如一些通用枚举、工具类		
+    |   |---xiaohongshu-spring-boot-starter-biz-context			-- 上下文组件
+    |   |---xiaohongshu-spring-boot-starter-biz-operationlog		-- 接口日志文件
+    |   |---xiaohongshu-spring-boot-starter-jackson			-- 自定义 Jackson 配置
+    |---xiaohongshu-gateway			-- 网关模块
+    |---xiaohongshu-kv			-- KV 键值模块
+    |   |---xiaohongshu-kv-api			-- KV,RPC层,供其他服务调用
+    |   |---xiaohongshu-kv-biz			-- KV业务模块
+    |---xiaohongshu-note		-- 笔记模块
+    |   |---xiaohongshu-note-api		-- 笔记,RPC层,供其他服务调用
+    |   |---xiaohongshu-note-biz		-- 笔记业务模块
+    |---xiaohongshu-oss			-- 对象存储模块
+    |   |---xiaohongshu-oss-api			-- 对象存储,RPC层,供其他服务调用
+    |   |---xiaohongshu-oss-biz			-- 对象存储业务模块
+    |---xiaohongshu-search		-- 搜索模块
+    |   |---xiaohonghsu-search-api		-- 搜索,RPC层,供其他服务调用
+    |   |---xiaohongshu-search-biz		-- 搜索业务模块
+    |---xiaohongshu-user		-- 用户模块
+        |---xiaohongshu-user-api		-- 用户,RPC层,供其他服务调用
+        |---xiaohongshu-user-biz		-- 用户业务模块
+```
 
 
 

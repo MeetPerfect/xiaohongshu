@@ -23,7 +23,21 @@
       from t_topic
       where id = #{id,jdbcType=BIGINT}
     </select>
-    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    <select id="selectByLikeName" resultMap="BaseResultMap">
+      select id, name from t_topic
+      where name like concat(#{keyword}, '%') and is_deleted = 0 limit 50
+    </select>
+  <select id="selectByTopicIdIn" resultMap="BaseResultMap">
+    select id, name from t_topic
+    where id in 
+    <foreach collection="list" item="topicId" open="(" separator="," close=")">
+      #{topicId}
+    </foreach>
+  </select>
+  <select id="selectByTopicName" resultMap="BaseResultMap">
+    select id, name from t_topic where name = #{name}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_topic
     where id = #{id,jdbcType=BIGINT}
   </delete>

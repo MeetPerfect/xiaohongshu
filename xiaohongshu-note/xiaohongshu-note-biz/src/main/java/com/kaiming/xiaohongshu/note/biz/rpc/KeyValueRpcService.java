@@ -28,6 +28,7 @@ public class KeyValueRpcService {
 
     /**
      * 保存笔记内容
+     *
      * @param uuid
      * @param content
      * @return
@@ -44,11 +45,12 @@ public class KeyValueRpcService {
 
     /**
      * 删除笔记内容
+     *
      * @param uuid
      * @return
      */
     public boolean deleteNoteContent(String uuid) {
-        DeleteNoteContentReqDTO deleteNoteContentReqDTO  = new DeleteNoteContentReqDTO(uuid);
+        DeleteNoteContentReqDTO deleteNoteContentReqDTO = new DeleteNoteContentReqDTO(uuid);
         Response<?> response = keyValueFeignApi.deleteNoteContent(deleteNoteContentReqDTO);
 
         return !Objects.isNull(response) && response.isSuccess();
@@ -56,15 +58,16 @@ public class KeyValueRpcService {
 
     /**
      * 根据UUID查询笔记内容
+     *
      * @param uuid
      * @return
      */
-    public String  findNoteContent(String uuid) {
+    public String findNoteContent(String uuid) {
         FindNoteContentReqDTO findNoteContentReqDTO = new FindNoteContentReqDTO();
         findNoteContentReqDTO.setUuid(uuid);
 
         Response<FindNoteContentRespDTO> response = keyValueFeignApi.findNoteContent(findNoteContentReqDTO);
-        
+
         if (Objects.isNull(response) || !response.isSuccess() || Objects.isNull(response.getData())) {
             return null;
         }

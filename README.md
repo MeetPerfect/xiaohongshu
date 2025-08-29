@@ -7,7 +7,9 @@
 
 ## 项目简介
 
-仿小红书社区项目，主要包括笔记发布、点赞、收藏、关注等功能。平台需要满足海量用户的高并发读写 和数据一致性要求，确保用户操作的实时响应，并通过分布式架构实现高可用和高扩展性。
+仿小红书社区项目，主要包括笔记发布、点赞、收藏、关注等功能。平台需要满足海量用户的高并发读写和数据一致性要求，确保用户操作的实时响应，并通过分布式架构实现高可用和高扩展性。
+
+
 
 ## 环境搭建
 
@@ -26,6 +28,7 @@
 | Visual Studio Code | 编辑器              | https://code.visualstudio.com/                  |
 | Snipaste           | 屏幕截图工具        | https://www.snipaste.com/                       |
 | Typora             | Markdown编辑器      | https://typora.io/                              |
+| Presson            | 流程图              | https://www.processon.com/                      |
 
 
 
@@ -54,6 +57,7 @@
 | Logstash           | 7.3.0    | 全量ES索引构建           | https://www.elastic.co/downloads/past-releases |
 | Kibana             | 7.3.0    | 日志可视化查看工具       | https://www.elastic.co/cn/kibana               |
 | Docker             | 26.1.4   | 应用容器引擎             | https://www.docker.com                         |
+| FRP                | v0.61.2  | 内网穿透                 | https://github.com/fatedier/frp                |
 
 
 
@@ -115,3 +119,11 @@
 
 
 ## 项目展示
+
+
+
+
+
+
+
+## TODO

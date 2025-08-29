@@ -21,6 +21,7 @@ import com.kaiming.xiaohongshu.note.biz.convert.NoteConvert;
 import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteCollectionDO;
 import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteDO;
 import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteLikeDO;
+import com.kaiming.xiaohongshu.note.biz.domain.dataobject.TopicDO;
 import com.kaiming.xiaohongshu.note.biz.domain.mapper.NoteCollectionDOMapper;
 import com.kaiming.xiaohongshu.note.biz.domain.mapper.NoteDOMapper;
 import com.kaiming.xiaohongshu.note.biz.domain.mapper.NoteLikeDOMapper;
@@ -229,7 +230,7 @@ public class NoteServiceImpl implements NoteService {
         // 延迟双删：发送延迟消息
         sendDelayDeleteRedisPublishedNoteListCacheMQ(creatorId);
 
-        // 发送 MQ
+        // 发送 MQ消息, 更新笔记计数
         // 构建消息体
         NoteOperateMqDTO noteOperateMqDTO = NoteOperateMqDTO.builder()
                 .creatorId(creatorId)
@@ -299,6 +300,10 @@ public class NoteServiceImpl implements NoteService {
             log.info("==> 命中了本地缓存；{}", findNoteDetailRspVOStrLocalCache);
             // 可见性校验
             checkNoteVisibleFromVO(userId, findNoteDetailRespVO);
+            
+            // 获取设置笔记计数
+            getAndSetCount(noteId, findNoteDetailRespVO);
+            
             return Response.success(findNoteDetailRespVO);
         }
 
@@ -313,10 +318,12 @@ public class NoteServiceImpl implements NoteService {
             // 异步线程将笔记信息存入本地缓存
             threadPoolTaskExecutor.submit(() -> {
                 // 写入本地缓存
-                LOCAL_CACHE.put(noteId, Objects.isNull(findNoteDetailRespVO) ? "" : JsonUtils.toJsonString(findNoteDetailRespVO));
+                LOCAL_CACHE.put(noteId, Objects.isNull(findNoteDetailRespVO) ? "null" : JsonUtils.toJsonString(findNoteDetailRespVO));
             });
             // 可见性校验
             checkNoteVisibleFromVO(userId, findNoteDetailRespVO);
+            // 获取设置笔记计数
+            getAndSetCount(noteId, findNoteDetailRespVO);
             return Response.success(findNoteDetailRespVO);
         }
 
@@ -352,13 +359,19 @@ public class NoteServiceImpl implements NoteService {
                     () -> keyValueRpcService.findNoteContent(noteDO.getContentUuid()), threadPoolTaskExecutor
             );
         }
+        
+        // RPC 调用计数服务，获取笔记计数数据
+        CompletableFuture<FindNoteCountByIdRespDTO> countResultFuture = CompletableFuture.supplyAsync(() ->
+                countRpcService.findNoteCountByIds(List.of(noteId)).get(0), threadPoolTaskExecutor);
+        
         CompletableFuture<String> finalContentResultFuture = contentResultFuture;
         CompletableFuture<FindNoteDetailRespVO> resultFuture = CompletableFuture
-                .allOf(userResultFuture, contentResultFuture)
+                .allOf(userResultFuture, contentResultFuture, countResultFuture)
                 .thenApply(s -> {
                     // 获取 Future结果
                     FindUserByIdRespDTO findUserByIdRespDTO = userResultFuture.join();
                     String content = finalContentResultFuture.join();
+                    FindNoteCountByIdRespDTO findNoteCountByIdRespDTO = countResultFuture.join();
 
                     // 笔记类型
                     Integer noteType = noteDO.getType();
@@ -371,6 +384,20 @@ public class NoteServiceImpl implements NoteService {
                             && StringUtils.isNotBlank(imgUrisStr)) {
                         imgUris = List.of(imgUrisStr.split(","));
                     }
+                    
+                    // 批量查询话题
+                    String topicIdsStr = noteDO.getTopicIds();
+                    List<FindTopicRespVO> findTopicRespVOS = null;
+                    if (StringUtils.isNotBlank(topicIdsStr)) {
+                        List<Long> topicIds = Arrays.stream(topicIdsStr.split(","))
+                                .map(Long::valueOf)
+                                .toList();
+                        List<TopicDO> topicDOS = topicDOMapper.selectByTopicIdIn(topicIds);
+                        findTopicRespVOS = topicDOS.stream().map(topicDO -> FindTopicRespVO.builder()
+                                .id(noteId)
+                                .name(topicDO.getName())
+                                .build()).toList();
+                    }
 
                     // 构建返回VO实体类
                     return FindNoteDetailRespVO.builder()
@@ -379,20 +406,24 @@ public class NoteServiceImpl implements NoteService {
                             .title(noteDO.getTitle())
                             .content(content)
                             .imgUris(imgUris)
-                            .topicId(noteDO.getTopicId())
-                            .topicName(noteDO.getTopicName())
+//                            .topicId(noteDO.getTopicId())
+//                            .topicName(noteDO.getTopicName())
+                            .topics(findTopicRespVOS)
                             .creatorId(noteDO.getCreatorId())
                             .creatorName(findUserByIdRespDTO.getNickName())
                             .avatar(findUserByIdRespDTO.getAvatar())
                             .videoUri(noteDO.getVideoUri())
                             .updateTime(noteDO.getUpdateTime())
                             .visible(noteDO.getVisible())
+                            .LikeTotal(Objects.isNull(findNoteCountByIdRespDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRespDTO.getLikeTotal()))
+                            .CollectTotal(Objects.isNull(findNoteCountByIdRespDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRespDTO.getCollectTotal()))
+                            .CommentTotal(Objects.isNull(findNoteCountByIdRespDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRespDTO.getCommentTotal()))
                             .build();
                 });
 
         // 获取拼装后的 findNoteDetailRspVO
         FindNoteDetailRespVO findNoteDetailRespVO = resultFuture.get();
-
+        // 异步线程将笔记详情写入 Redis
         threadPoolTaskExecutor.submit(() -> {
             String noteDetailJson1 = JsonUtils.toJsonString(findNoteDetailRespVO);
             // 过期时间（保底1天 + 随机秒数，将缓存过期时间打散，防止同一时间大量缓存失效，导致数据库压力太大）
@@ -400,6 +431,35 @@ public class NoteServiceImpl implements NoteService {
             redisTemplate.opsForValue().set(noteDetailRedisKey, noteDetailJson1, expireSeconds, TimeUnit.SECONDS);
         });
         return Response.success(findNoteDetailRespVO);
+    }
+
+    /**
+     * 设置笔记计数
+     * @param noteId
+     * @param findNoteDetailRespVO
+     */
+    private void getAndSetCount(Long noteId, FindNoteDetailRespVO findNoteDetailRespVO) {
+        String noteCountKey = RedisKeyConstants.buildNoteCountKey(noteId);
+        List<Object> counts = redisTemplate.opsForHash()
+                .multiGet(noteCountKey, Arrays.asList(RedisKeyConstants.FIELD_LIKE_TOTAL,
+                        RedisKeyConstants.FIELD_COLLECT_TOTAL,
+                        RedisKeyConstants.FIELD_COMMENT_TOTAL));
+
+        boolean hasNull = counts.stream().anyMatch(Objects::isNull);
+        
+        // rpc调用计数服务
+        if (hasNull) {
+            List<Long> noteIds = List.of(noteId);
+            FindNoteCountByIdRespDTO findNoteCountByIdRspDTO = countRpcService.findNoteCountByIds(noteIds).get(0);
+            findNoteDetailRespVO.setLikeTotal(Objects.isNull(findNoteCountByIdRspDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRspDTO.getLikeTotal()));
+            findNoteDetailRespVO.setCollectTotal(Objects.isNull(findNoteCountByIdRspDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRspDTO.getCollectTotal()));
+            findNoteDetailRespVO.setCommentTotal(Objects.isNull(findNoteCountByIdRspDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRspDTO.getCommentTotal()));
+            
+        } else {
+            findNoteDetailRespVO.setLikeTotal(NumberUtils.formatNumberString(Long.parseLong(counts.get(0).toString())));
+            findNoteDetailRespVO.setCollectTotal(NumberUtils.formatNumberString(Long.parseLong(counts.get(1).toString())));
+            findNoteDetailRespVO.setCommentTotal(NumberUtils.formatNumberString(Long.parseLong(counts.get(2).toString())));
+        }
     }
 
     /**
@@ -463,7 +523,7 @@ public class NoteServiceImpl implements NoteService {
         // 话题
         Long topicId = updateNoteReqVO.getTopicId();
         String topicName = null;
-        if (Objects.isNull(topicId)) {
+        if (Objects.nonNull(topicId)) {
             topicName = topicDOMapper.selectNameByPrimaryKey(topicId);
 
             // 判断话题名称是否为空
@@ -513,7 +573,7 @@ public class NoteServiceImpl implements NoteService {
             isUpdateSuccess = keyValueRpcService.deleteNoteContent(contentUuid);
         } else {
             // 若将无内容的笔记，更新为了有内容的笔记，需要重新生成 UUID
-            contentUuid = StringUtils.isBlank(content) ? UUID.randomUUID().toString() : contentUuid;
+            contentUuid = StringUtils.isBlank(contentUuid) ? UUID.randomUUID().toString() : contentUuid;
             // 调用 K-V 更新短文本
             isUpdateSuccess = keyValueRpcService.saveNoteContent(contentUuid, content);
         }

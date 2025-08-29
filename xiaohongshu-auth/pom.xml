@@ -106,18 +106,6 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid</artifactId>
-            <version>1.2.23</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!--        &lt;!&ndash; Druid 数据库连接池 &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba</groupId>-->
-<!--            <artifactId>druid-spring-boot-3-starter</artifactId>-->
-<!--        </dependency>-->
         
     </dependencies>
     

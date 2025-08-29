@@ -34,11 +34,19 @@ public class SaTokenConfigure {
                     SaRouter.match("/**")
                             .notMatch("/auth/login")
                             .notMatch("/auth/verification/code/send")
+                            .notMatch("/note/channel/list")
+                            .notMatch("/note/discover/note/list")
+                            .notMatch("/note/profile/note/list")
+                            .notMatch("/note/note/detail")
+                            .notMatch("/note/note/isLikedAndCollectedData")
+                            .notMatch("/comment/comment/list")
+                            .notMatch("/comment/comment/child/list")
                             .notMatch("/user/user/profile")
+                            .notMatch("/search/search/note")
                             .check(r -> StpUtil.checkLogin());
 
                     // 权限校验
-                    SaRouter.match("/auth/logout", r -> StpUtil.checkPermission("app:note:publish"));
+//                    SaRouter.match("/auth/logout", r -> StpUtil.checkPermission("app:note:publish"));
 //                    SaRouter.match("/auth/user/logout", r -> StpUtil.checkRole("user"));
 //                    SaRouter.match("/goods/**", r -> StpUtil.checkRole("goods"));
 //                    SaRouter.match("/order/**", r -> StpUtil.checkRole("order"));

@@ -35,6 +35,11 @@ public class FindNoteDetailRespVO {
 
     private Long topicId;
 
+    /**
+     * 话题集合
+     */
+    private List<FindTopicRespVO> topics;
+
     private String topicName;
 
     private Long creatorId;
@@ -54,5 +59,20 @@ public class FindNoteDetailRespVO {
      * 是否可见
      */
     private Integer visible;
+
+    /**
+     * 点赞总数
+     */
+    private String LikeTotal;
+
+    /**
+     * 收藏总数
+     */
+    private String CollectTotal;
+
+    /**
+     * 评论总数
+     */
+    private String CommentTotal;
     
 }

@@ -108,16 +108,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public Response<?> updateUserInfo(UpdateUserInfoReqVO updateUserInfoReqVO) {
         // 被修改的用户Id
-        Long userId = updateUserInfoReqVO.getUserId();
-        if (Objects.isNull(userId)) {
-            throw new BizException(ResponseCodeEnum.USER_NOT_NULL);
-        }
+//        Long userId = updateUserInfoReqVO.getUserId();
+//        if (Objects.isNull(userId)) {
+//            throw new BizException(ResponseCodeEnum.USER_NOT_NULL);
+//        }
         // 当前登录用户
-        Long currUserId = LoginUserContextHolder.getUserId();
+        Long userId = LoginUserContextHolder.getUserId();
         // 非号主本人，无法修改其个人信息
-        if (!Objects.equals(userId, currUserId)) {
-            throw new BizException(ResponseCodeEnum.CANT_UPDATE_OTHER_USER_PROFILE);
-        }
+//        if (!Objects.equals(userId, currUserId)) {
+//            throw new BizException(ResponseCodeEnum.CANT_UPDATE_OTHER_USER_PROFILE);
+//        }
 
         UserDO userDO = new UserDO();
         // 设置用户Id
@@ -256,7 +256,7 @@ public class UserServiceImpl implements UserService {
         // 若未注册，则创建新用户
 //        Long xiaohongshuId = redisTemplate.opsForValue().increment(RedisKeyConstants.XIAOHONGSHU_ID_GENERATOR_KEY);
 
-        // RPC: 调用分布式 ID 生成服务生成小哈书 ID
+        // RPC: 调用分布式 ID 生成服务生成小红书 ID
         String xiaohongshuId = distributedIdGeneratorRpcService.getXiaohongshuId();
         // RPC: 调用分布式 ID 生成服务生成用户 ID
         String userIdStr = distributedIdGeneratorRpcService.getUserId();

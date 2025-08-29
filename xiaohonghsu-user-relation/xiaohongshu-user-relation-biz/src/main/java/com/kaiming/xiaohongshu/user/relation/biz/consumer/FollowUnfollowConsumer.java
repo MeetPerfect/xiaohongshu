@@ -75,9 +75,10 @@ public class FollowUnfollowConsumer implements RocketMQListener<Message> {
         // 根据 MQ 标签，判断操作类型
 
         if (Objects.equals(tags, MQConstants.TAG_FOLLOW)) {     // 关注
+            // 处理关注
             handleFollowTagMessage(bodyJsonStr);
         } else if (Objects.equals(tags, MQConstants.TAG_UNFOLLOW)) {     // 取关
-            // TODO
+            // 处理取关
             handlerUnfollowTagMessage(bodyJsonStr);
         }
     }
@@ -156,7 +157,8 @@ public class FollowUnfollowConsumer implements RocketMQListener<Message> {
                 // 关注表：一条记录
                 int count = followingDOMapper.insert(FollowingDO.builder()
                         .userId(userId)
-                        .followingUserId(followUserId).createTime(createTime)
+                        .followingUserId(followUserId)
+                        .createTime(createTime)
                         .build());
                 if (count > 0) {
                     fansDOMapper.insert(FansDO.builder()

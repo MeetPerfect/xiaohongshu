@@ -20,7 +20,7 @@ import java.util.Objects;
 /**
  * ClassName: AddUserId2HeaderFilter
  * Package: com.kaiming.xiaohongshu.gateway.filter
- * Description:
+ * Description: 转发请求时，将用户 ID 添加到 Header 请求头中，透传给下游服务
  *
  * @Auther gongkaiming
  * @Create 2025/5/17 13:28

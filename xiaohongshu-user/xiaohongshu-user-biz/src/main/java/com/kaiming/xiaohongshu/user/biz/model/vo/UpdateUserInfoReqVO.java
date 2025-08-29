@@ -24,11 +24,6 @@ import java.time.LocalDate;
 @Builder
 public class UpdateUserInfoReqVO {
     /**
-     * 用户Id
-     */
-    @NotNull(message = "用户Id不能为空")
-    private Long userId;    
-    /**
      * 头像
      */
     private MultipartFile avatar;

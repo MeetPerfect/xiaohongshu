@@ -84,6 +84,13 @@
       </if>
     </trim>
   </insert>
+  <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+    insert into t_topic(name, crreat_time, update_time, is_deleted)
+    values 
+        <foreach collection="newTopics" item="newTopic" separator=",">
+          (#{newTopic.name}, now(), now(), 0)
+        </foreach>
+  </insert>
   <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.note.biz.domain.dataobject.TopicDO">
     update t_topic
     <set>

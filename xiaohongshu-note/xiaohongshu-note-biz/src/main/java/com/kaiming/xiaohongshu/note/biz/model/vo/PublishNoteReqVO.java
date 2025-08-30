@@ -1,5 +1,6 @@
 package com.kaiming.xiaohongshu.note.biz.model.vo;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,10 +30,20 @@ public class PublishNoteReqVO {
     private List<String> imgUris;
 
     private String videoUri;
-
+    @NotBlank(message = "标题不能为空")
     private String title;
 
     private String content;
 
-    private Long topicId;
+//    private Long topicId;
+    /**
+     * 支持用户添加多话题
+     */
+    private List<Object> topics;
+
+    /**
+     * 笔记属于哪个频道
+     */
+    @NotBlank(message = "频道不能为空")
+    private Long channelId;
 }

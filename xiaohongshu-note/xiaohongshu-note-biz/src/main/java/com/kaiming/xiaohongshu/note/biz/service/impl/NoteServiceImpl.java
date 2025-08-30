@@ -8,6 +8,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.kaiming.framework.biz.context.holder.LoginUserContextHolder;
 import com.kaiming.framework.common.exception.BizException;
 import com.kaiming.framework.common.response.Response;
@@ -18,14 +19,8 @@ import com.kaiming.xiaohongshu.count.dto.FindNoteCountByIdRespDTO;
 import com.kaiming.xiaohongshu.note.biz.constant.MQConstants;
 import com.kaiming.xiaohongshu.note.biz.constant.RedisKeyConstants;
 import com.kaiming.xiaohongshu.note.biz.convert.NoteConvert;
-import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteCollectionDO;
-import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteDO;
-import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteLikeDO;
-import com.kaiming.xiaohongshu.note.biz.domain.dataobject.TopicDO;
-import com.kaiming.xiaohongshu.note.biz.domain.mapper.NoteCollectionDOMapper;
-import com.kaiming.xiaohongshu.note.biz.domain.mapper.NoteDOMapper;
-import com.kaiming.xiaohongshu.note.biz.domain.mapper.NoteLikeDOMapper;
-import com.kaiming.xiaohongshu.note.biz.domain.mapper.TopicDOMapper;
+import com.kaiming.xiaohongshu.note.biz.domain.dataobject.*;
+import com.kaiming.xiaohongshu.note.biz.domain.mapper.*;
 import com.kaiming.xiaohongshu.note.biz.enums.*;
 import com.kaiming.xiaohongshu.note.biz.model.dto.CollectUnCollectNoteMqDTO;
 import com.kaiming.xiaohongshu.note.biz.model.dto.LikeUnlikeNoteMqDTO;
@@ -97,6 +92,8 @@ public class NoteServiceImpl implements NoteService {
     private NoteCollectionDOMapper noteCollectionDOMapper;
     @Resource
     private CountRpcService countRpcService;
+    @Resource
+    private ChannelDOMapper channelDOMapper;
     /**
      * 本地缓存，使用 Caffeine 实现
      */
@@ -151,6 +148,13 @@ public class NoteServiceImpl implements NoteService {
                 break;
             }
         }
+        
+        // 判断所选的频道是否存在
+        Long channelId = publishNoteReqVO.getChannelId();
+        ChannelDO channelDO = channelDOMapper.selectByPrimaryKey(channelId);
+        if (Objects.isNull(channelDO)) {
+            throw new BizException(ResponseCodeEnum.CHANNEL_NOT_FOUND);
+        }
 
         // RPC 调用分布式ID生成服务，生成笔记ID
         String snowflakeId = distributedIdGeneratorRpcService.getSnowflakeId();
@@ -174,13 +178,14 @@ public class NoteServiceImpl implements NoteService {
 //            }
         }
         // 话题
-        Long topicId = publishNoteReqVO.getTopicId();
-        String topicName = null;
-        if (Objects.nonNull(topicId)) {
-            // 获取话题名称
-            topicName = topicDOMapper.selectNameByPrimaryKey(topicId);
-
-        }
+        String topicIds = handleTopics(publishNoteReqVO.getTopics());
+//        String topicName = null;
+//        if (Objects.nonNull(topicId)) {
+//            // 获取话题名称
+//            topicName = topicDOMapper.selectNameByPrimaryKey(topicId);
+//
+//        }
+        // TODO RPC调用 KV 服务，存储笔记内容，再更新数据库，更推荐---笔记表+待同步正文表事务提交->异步同步KV-MQ更新计数表
         // 获取发布者用户ID
         Long creatorId = LoginUserContextHolder.getUserId();
 
@@ -190,8 +195,10 @@ public class NoteServiceImpl implements NoteService {
                 .creatorId(creatorId)
                 .imgUris(imgUris)
                 .title(publishNoteReqVO.getTitle())
-                .topicId(topicId)
-                .topicName(topicName)
+//                .topicId(topicId)
+//                .topicName(topicName)
+                .channelId(channelId)
+                .topicIds(topicIds)
                 .type(type)
                 .visible(NoteVisibleEnum.PUBLIC.getCode())
                 .createTime(LocalDateTime.now())
@@ -220,7 +227,67 @@ public class NoteServiceImpl implements NoteService {
         return Response.success();
     }
 
-    private void processPublishContentEmptyNote(Long creatorId, NoteDO noteDO, String contentUuid) {
+    /**
+     * 获取话题集合字符串
+     * @param topicInputs
+     * @return
+     */
+    private String handleTopics(List<Object> topicInputs) {
+        if(CollUtil.isEmpty(topicInputs)) return null;
+        // 1. 分离已存在话题（ID）和新话题（名称）
+        List<Long> existingTopicIds = Lists.newArrayList();
+        List<String> newTopicNames = Lists.newArrayList();
+        
+        topicInputs.forEach(topic ->{
+            if (topic instanceof Number) {
+                // 已存在话题 ID
+                existingTopicIds.add(Long.valueOf(String.valueOf(topic)));
+            } else if (topic instanceof String){
+                // 新话题名称
+                newTopicNames.add((String) topic);
+            }
+        });
+        // 2. 查询现有话题信息 - 批量查询
+        Set<Long> existingTopicIdsSet = Sets.newHashSet();
+        if (CollUtil.isNotEmpty(existingTopicIds)) {
+            List<TopicDO> existingTopicDOS = topicDOMapper.selectByTopicIdIn(existingTopicIds);
+            existingTopicIdsSet = existingTopicDOS.stream()
+                    .map(TopicDO::getId)
+                    .collect(Collectors.toSet());
+        }
+
+        // 3. 处理新标签
+        List<TopicDO> newTopics = Lists.newArrayList();
+        for (String topicName : newTopicNames) {
+            TopicDO existingTopic = topicDOMapper.selectByTopicName(topicName);
+            if(Objects.isNull(existingTopic)) {
+                newTopics.add(TopicDO.builder().name(topicName).build());
+            } else {
+                existingTopicIdsSet.add(existingTopic.getId());
+            }
+        }
+
+        // 4. 批量保存新话题（如果有）
+        if (CollUtil.isNotEmpty(newTopics)) {
+            topicDOMapper.batchInsert(newTopics);
+        }
+
+        // 5. 获取所有话题的 ID（已存在和新插入的）
+        List<Long> allTopicIds = new ArrayList<>(existingTopicIdsSet);
+        if (CollUtil.isNotEmpty(newTopics)) {
+            newTopics.forEach(newTopic -> allTopicIds.add(newTopic.getId()));
+        }
+        // 6. 将所有的话题 ID 以逗号拼接
+        return StringUtils.join(allTopicIds, ",");
+    }
+
+    /**
+     * 处理笔记正文为空的情况
+     * @param creatorId
+     * @param noteDO
+     * @param snowflakeId
+     */
+    private void processPublishContentEmptyNote(Long creatorId, NoteDO noteDO, String snowflakeId) {
         // 删除个人主页 - 已发布笔记列表缓存
         // TODO: 应采取灵活的策略，如果是大V, 应该直接更新缓存，而不是直接删除；普通用户则可直接删除
         String publishedNoteListRedisKey = RedisKeyConstants.buildPublishedNoteListKey(creatorId);
@@ -234,7 +301,7 @@ public class NoteServiceImpl implements NoteService {
         // 构建消息体
         NoteOperateMqDTO noteOperateMqDTO = NoteOperateMqDTO.builder()
                 .creatorId(creatorId)
-                .noteId(noteDO.getId())
+                .noteId(Long.valueOf(snowflakeId))
                 .type(NoteOperateEnum.PUBLIC.getCode())
                 .build();
         // 构建消息对象，并将 DTO 转成 Json 字符串设置到消息体中
@@ -617,6 +684,7 @@ public class NoteServiceImpl implements NoteService {
      * @param deleteNoteReqVO
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response<?> deleteNote(DeleteNoteReqVO deleteNoteReqVO) {
         // 笔记ID
         Long noteId = deleteNoteReqVO.getId();

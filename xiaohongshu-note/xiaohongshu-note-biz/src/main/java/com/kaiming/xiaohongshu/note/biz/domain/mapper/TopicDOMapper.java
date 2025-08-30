@@ -1,6 +1,7 @@
 package com.kaiming.xiaohongshu.note.biz.domain.mapper;
 
 import com.kaiming.xiaohongshu.note.biz.domain.dataobject.TopicDO;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -10,6 +11,8 @@ public interface TopicDOMapper {
     int insert(TopicDO record);
 
     int insertSelective(TopicDO record);
+    
+    int batchInsert(@Param("newTopics") List<TopicDO> newTopics);
 
     TopicDO selectByPrimaryKey(Long id);
 

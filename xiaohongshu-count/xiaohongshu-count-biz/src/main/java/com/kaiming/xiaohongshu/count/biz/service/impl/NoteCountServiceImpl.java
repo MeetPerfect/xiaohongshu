@@ -103,7 +103,7 @@ public class NoteCountServiceImpl implements NoteCountService {
                     .collect(Collectors.toMap(NoteCountDO::getNoteId, noteCountDO -> noteCountDO));
 
             // 将笔记 Hash 计数同步到 Redis 中
-            syncNoteHash2Redis(findNoteCountsByIdRespDTOS, noteIdAndDOMap);
+                syncNoteHash2Redis(findNoteCountsByIdRespDTOS, noteIdAndDOMap);
 
             // 针对 DTO 中为 null 的计数字段，循环设置从数据库中查询到的计数
             for (FindNoteCountByIdRespDTO findNoteCountsByIdRespDTO : findNoteCountsByIdRespDTOS) {
@@ -115,11 +115,11 @@ public class NoteCountServiceImpl implements NoteCountService {
                 NoteCountDO noteCountDO = noteIdAndDOMap.get(noteId);
 
                 if (Objects.isNull(likeTotal))
-                    findNoteCountsByIdRespDTO.setLikeTotal(Objects.nonNull(likeTotal) ? noteCountDO.getLikeTotal() : null);
+                    findNoteCountsByIdRespDTO.setLikeTotal(Objects.nonNull(likeTotal) ? noteCountDO.getLikeTotal() : 0);
                 if (Objects.isNull(collectTotal))
-                    findNoteCountsByIdRespDTO.setCollectTotal(Objects.nonNull(collectTotal) ? noteCountDO.getCollectTotal() : null);
+                    findNoteCountsByIdRespDTO.setCollectTotal(Objects.nonNull(collectTotal) ? noteCountDO.getCollectTotal() : 0);
                 if (Objects.isNull(commentTotal))
-                    findNoteCountsByIdRespDTO.setCommentTotal(Objects.nonNull(commentTotal) ? noteCountDO.getCommentTotal() : null);
+                    findNoteCountsByIdRespDTO.setCommentTotal(Objects.nonNull(commentTotal) ? noteCountDO.getCommentTotal() : 0);
             }
 
         }
@@ -157,15 +157,15 @@ public class NoteCountServiceImpl implements NoteCountService {
 
                     if (Objects.isNull(likeTotal)) {
                         countMap.put(RedisKeyConstants.FIELD_LIKE_TOTAL,
-                                Objects.nonNull(noteCountDO) ? noteCountDO.getLikeTotal() : null);
+                                Objects.nonNull(noteCountDO) ? noteCountDO.getLikeTotal() : 0);
                     }
                     if (Objects.isNull(collectTotal)) {
                         countMap.put(RedisKeyConstants.FIELD_COLLECT_TOTAL, 
-                                Objects.nonNull(noteCountDO) ? noteCountDO.getCollectTotal() : null);
+                                Objects.nonNull(noteCountDO) ? noteCountDO.getCollectTotal() : 0);
                     }
                     if (Objects.isNull(commentTotal)) {
                         countMap.put(RedisKeyConstants.FIELD_COMMENT_TOTAL,
-                                Objects.nonNull(noteCountDO) ? noteCountDO.getCommentTotal() : null);
+                                Objects.nonNull(noteCountDO) ? noteCountDO.getCommentTotal() : 0);
                     }
                     // 批量添加 Hash 的计数 Field
                     operations.opsForHash().putAll(noteCountHashKey, countMap);

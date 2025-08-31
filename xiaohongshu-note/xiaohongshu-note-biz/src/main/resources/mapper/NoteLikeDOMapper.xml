@@ -18,7 +18,7 @@
     where id = #{id,jdbcType=BIGINT}
   </select>
     <select id="selectCountByUserIdAndNoteId" resultType="int" parameterType="map">
-      select count(1) from t_note_like where id = #{userId} and note_id = #{noteId} and status = 1 limit 1
+      select count(1) from t_note_like where user_id = #{userId} and note_id = #{noteId} and status = 1 limit 1
     </select>
   <select id="selectByUserId" resultMap="BaseResultMap" parameterType="map">
     select note_id from t_note_like

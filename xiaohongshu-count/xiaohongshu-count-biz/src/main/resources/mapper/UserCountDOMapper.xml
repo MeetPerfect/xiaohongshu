@@ -106,7 +106,12 @@
       values (#{userId}, #{count})
       on duplicate key update note_total = note_total + #{count};
     </insert>
-    <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.count.biz.domain.dataobject.UserCountDO">
+  <insert id="insertOrUpdateCollectTotalByUserId">
+    insert into t_user_count (user_id, collect_total)
+    values (#{userId}, #{count})
+    on duplicate key update collect_total = collect_total + #{count}
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.kaiming.xiaohongshu.count.biz.domain.dataobject.UserCountDO">
     update t_user_count
     <set>
       <if test="userId != null">

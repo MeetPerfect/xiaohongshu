@@ -5,33 +5,33 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 /**
- * ClassName: CountCollectUnCollectNoteMqDTO
+ * ClassName: AggregationCountCollectUnCollectNoteMqDTO
  * Package: com.kaiming.xiaohongshu.count.biz.model.dto
  * Description:
  *
  * @Auther gongkaiming
- * @Create 2025/7/9 19:33
+ * @Create 2025/8/31 21:31
  * @Version 1.0
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CountCollectUnCollectNoteMqDTO {
+public class AggregationCountCollectUnCollectNoteMqDTO {
 
-    private Long userId;
+    /**
+     * 发布者笔记Id
+     */
+    private Long creatorId;
 
+    /**
+     * 笔记Id
+     */
     private Long noteId;
 
     /**
-     * 0: 取消收藏， 1：收藏
+     * 聚合后数
      */
-    private Integer type;
-
-    private LocalDateTime createTime;
-    
-    private Long noteCreatorId;
+    private Integer count;
 }

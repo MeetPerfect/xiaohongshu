@@ -1003,7 +1003,7 @@ public class NoteServiceImpl implements NoteService {
         switch (noteUnlikeLuaResultEnum) {
             // 不存在
             case NOT_EXIST -> {
-                // 异步初始化布隆过滤器
+                // 异步初始化rbitmap
                 threadPoolTaskExecutor.submit(() -> {
                     long expireSeconds = 60 * 60 * 24 + RandomUtil.randomInt(60 * 60 * 24);
                     batchAddNoteLike2RBitmapAndExpire(userId, expireSeconds, rbitmapUserNoteLikeListKey);
@@ -1016,7 +1016,7 @@ public class NoteServiceImpl implements NoteService {
                 }
 
             }
-            case NOTE_NOT_LIKED -> // 布隆过滤器校验目标笔记未被点赞（判断绝对正确）
+            case NOTE_NOT_LIKED -> // rbitmap校验目标笔记未被点赞（判断绝对正确）
                     throw new BizException(ResponseCodeEnum.NOTE_NOT_LIKED);
         }
 
@@ -1080,9 +1080,10 @@ public class NoteServiceImpl implements NoteService {
         Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapUserNoteCollectListKey), noteId);
         NoteCollectLuaResultEnum noteCollectLuaResultEnum = NoteCollectLuaResultEnum.valueOf(result);
 
-        // 用户收藏列表 ZSet Key
+        // 用户收藏列表 
         String userNoteCollectZSetKey = RedisKeyConstants.buildUserNoteCollectZSetKey(userId);
         switch (noteCollectLuaResultEnum) {
+            // rbitmap 中不存在
             case NOT_EXIST -> {
                 // 从数据库中校验笔记是否被收藏，并异步初始化布隆过滤器，设置过期时间
                 int count = noteCollectionDOMapper.selectCountByUserIdAndNoteId(userId, noteId);
@@ -1155,7 +1156,7 @@ public class NoteServiceImpl implements NoteService {
                 luaArgs.add(DateUtils.localDateTime2Timestamp(LocalDateTime.now())); // score ：收藏时间戳
                 luaArgs.add(noteId);
                 luaArgs.add(expireTime);
-                redisTemplate.execute(script2, Collections.singletonList(userNoteCollectZSetKey), luaArgs.toArray());
+                redisTemplate.execute(script, Collections.singletonList(userNoteCollectZSetKey), luaArgs.toArray());
             }
         }
         // 4. 发送 MQ, 将收藏数据落库
@@ -1247,10 +1248,10 @@ public class NoteServiceImpl implements NoteService {
 
         switch (noteUnCollectLuaResultEnum) {
             case NOT_EXIST -> {
-                // 异步初始化布隆过滤器
+                // 异步初始化rbitmap
                 threadPoolTaskExecutor.submit(() -> {
                     long expireSeconds = 60 * 60 * 24 + RandomUtil.randomInt(60 * 60 * 24);
-                    batchAddNoteCollect2BloomAndExpire(userId, expireSeconds, rbitmapUserNoteCollectListKey);
+                    batchAddNoteCollect2RBitmapAndExpire(userId, expireSeconds, rbitmapUserNoteCollectListKey);
 
                 });
                 // 数据库中校验笔记是否被收藏
@@ -1261,8 +1262,6 @@ public class NoteServiceImpl implements NoteService {
                 }
             }
             case NOTE_NOT_COLLECTED -> {
-                // 异步初始化布隆过滤器
-
                 throw new BizException(ResponseCodeEnum.NOTE_NOT_COLLECTED);
             }
         }

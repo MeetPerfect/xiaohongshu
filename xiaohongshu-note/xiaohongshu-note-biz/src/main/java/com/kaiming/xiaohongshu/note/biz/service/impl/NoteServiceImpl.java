@@ -148,7 +148,7 @@ public class NoteServiceImpl implements NoteService {
                 break;
             }
         }
-        
+
         // 判断所选的频道是否存在
         Long channelId = publishNoteReqVO.getChannelId();
         ChannelDO channelDO = channelDOMapper.selectByPrimaryKey(channelId);
@@ -223,26 +223,27 @@ public class NoteServiceImpl implements NoteService {
         TransactionSendResult transactionSendResult = rocketMQTemplate
                 .sendMessageInTransaction(MQConstants.TOPIC_PUBLISH_NOTE_TRANSACTION, message, null);
         log.info("## 事务消息发送结果: {}", transactionSendResult.getLocalTransactionState());
-        
+
         return Response.success();
     }
 
     /**
      * 获取话题集合字符串
+     *
      * @param topicInputs
      * @return
      */
     private String handleTopics(List<Object> topicInputs) {
-        if(CollUtil.isEmpty(topicInputs)) return null;
+        if (CollUtil.isEmpty(topicInputs)) return null;
         // 1. 分离已存在话题（ID）和新话题（名称）
         List<Long> existingTopicIds = Lists.newArrayList();
         List<String> newTopicNames = Lists.newArrayList();
-        
-        topicInputs.forEach(topic ->{
+
+        topicInputs.forEach(topic -> {
             if (topic instanceof Number) {
                 // 已存在话题 ID
                 existingTopicIds.add(Long.valueOf(String.valueOf(topic)));
-            } else if (topic instanceof String){
+            } else if (topic instanceof String) {
                 // 新话题名称
                 newTopicNames.add((String) topic);
             }
@@ -260,7 +261,7 @@ public class NoteServiceImpl implements NoteService {
         List<TopicDO> newTopics = Lists.newArrayList();
         for (String topicName : newTopicNames) {
             TopicDO existingTopic = topicDOMapper.selectByTopicName(topicName);
-            if(Objects.isNull(existingTopic)) {
+            if (Objects.isNull(existingTopic)) {
                 newTopics.add(TopicDO.builder().name(topicName).build());
             } else {
                 existingTopicIdsSet.add(existingTopic.getId());
@@ -283,6 +284,7 @@ public class NoteServiceImpl implements NoteService {
 
     /**
      * 处理笔记正文为空的情况
+     *
      * @param creatorId
      * @param noteDO
      * @param snowflakeId
@@ -367,10 +369,10 @@ public class NoteServiceImpl implements NoteService {
             log.info("==> 命中了本地缓存；{}", findNoteDetailRspVOStrLocalCache);
             // 可见性校验
             checkNoteVisibleFromVO(userId, findNoteDetailRespVO);
-            
+
             // 获取设置笔记计数
             getAndSetCount(noteId, findNoteDetailRespVO);
-            
+
             return Response.success(findNoteDetailRespVO);
         }
 
@@ -426,11 +428,11 @@ public class NoteServiceImpl implements NoteService {
                     () -> keyValueRpcService.findNoteContent(noteDO.getContentUuid()), threadPoolTaskExecutor
             );
         }
-        
+
         // RPC 调用计数服务，获取笔记计数数据
         CompletableFuture<FindNoteCountByIdRespDTO> countResultFuture = CompletableFuture.supplyAsync(() ->
                 countRpcService.findNoteCountByIds(List.of(noteId)).get(0), threadPoolTaskExecutor);
-        
+
         CompletableFuture<String> finalContentResultFuture = contentResultFuture;
         CompletableFuture<FindNoteDetailRespVO> resultFuture = CompletableFuture
                 .allOf(userResultFuture, contentResultFuture, countResultFuture)
@@ -451,7 +453,7 @@ public class NoteServiceImpl implements NoteService {
                             && StringUtils.isNotBlank(imgUrisStr)) {
                         imgUris = List.of(imgUrisStr.split(","));
                     }
-                    
+
                     // 批量查询话题
                     String topicIdsStr = noteDO.getTopicIds();
                     List<FindTopicRespVO> findTopicRespVOS = null;
@@ -502,6 +504,7 @@ public class NoteServiceImpl implements NoteService {
 
     /**
      * 设置笔记计数
+     *
      * @param noteId
      * @param findNoteDetailRespVO
      */
@@ -513,7 +516,7 @@ public class NoteServiceImpl implements NoteService {
                         RedisKeyConstants.FIELD_COMMENT_TOTAL));
 
         boolean hasNull = counts.stream().anyMatch(Objects::isNull);
-        
+
         // rpc调用计数服务
         if (hasNull) {
             List<Long> noteIds = List.of(noteId);
@@ -521,7 +524,7 @@ public class NoteServiceImpl implements NoteService {
             findNoteDetailRespVO.setLikeTotal(Objects.isNull(findNoteCountByIdRspDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRspDTO.getLikeTotal()));
             findNoteDetailRespVO.setCollectTotal(Objects.isNull(findNoteCountByIdRspDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRspDTO.getCollectTotal()));
             findNoteDetailRespVO.setCommentTotal(Objects.isNull(findNoteCountByIdRspDTO) ? "0" : NumberUtils.formatNumberString(findNoteCountByIdRspDTO.getCommentTotal()));
-            
+
         } else {
             findNoteDetailRespVO.setLikeTotal(NumberUtils.formatNumberString(Long.parseLong(counts.get(0).toString())));
             findNoteDetailRespVO.setCollectTotal(NumberUtils.formatNumberString(Long.parseLong(counts.get(1).toString())));
@@ -1296,6 +1299,122 @@ public class NoteServiceImpl implements NoteService {
         });
 
         return Response.success();
+    }
+
+    /**
+     * 获取是否点赞、收藏数据
+     *
+     * @param findNoteIsLikedAndCollectedReqVO
+     * @return
+     */
+    @Override
+    public Response<FindNoteIsLikedAndCollectedRespVO> isLikedAndCollectedData(FindNoteIsLikedAndCollectedReqVO findNoteIsLikedAndCollectedReqVO) {
+
+        // 笔记Id
+        Long noteId = findNoteIsLikedAndCollectedReqVO.getNoteId();
+        // 当前登录用户Id
+        Long userId = LoginUserContextHolder.getUserId();
+        // 默认未点赞、为收藏
+        boolean isLiked = false;
+        boolean isCollected = false;
+
+        // 若当前用户已登录
+        if (Objects.nonNull(userId)) {
+            // 判断是否点赞
+            isLiked = checkNoteIsLiked(noteId, userId);
+            // 判断是否收藏
+            // 2. 校验是否收藏
+            isCollected = checkNoteIsCollected(noteId, userId);
+        }
+
+        return Response.success(FindNoteIsLikedAndCollectedRespVO.builder()
+                .noteId(noteId)
+                .isLiked(isLiked)
+                .isCollected(isCollected)
+                .build());
+    }
+
+    /**
+     * 判断是否笔记收藏
+     * @param noteId
+     * @param userId
+     * @return
+     */
+    private boolean checkNoteIsCollected(Long noteId, Long userId) {
+        boolean isCollected = false;
+        // Roaring Bitmap Key
+        String rbitmapUserNoteCollectListKey = RedisKeyConstants.buildBloomUserNoteCollectListKey(userId);
+
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_note_collect_only_check.lua")));
+        script.setResultType(Long.class);
+        
+        // 执行Lua脚本
+        Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapUserNoteCollectListKey), noteId);
+
+        NoteCollectLuaResultEnum noteCollectLuaResultEnum = NoteCollectLuaResultEnum.valueOf(result);
+
+        if (Objects.isNull(noteCollectLuaResultEnum)) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+        switch (noteCollectLuaResultEnum) {
+            case NOT_EXIST -> {
+                int count = noteCollectionDOMapper.selectNoteIsCollected(userId, noteId);
+                long expireSeconds = 24 * 60 * 60 + RandomUtil.randomInt(24 * 60 * 60);
+                
+                if (count > 0) {
+                    threadPoolTaskExecutor.submit(() -> {
+                       batchAddNoteCollect2RBitmapAndExpire(userId, expireSeconds, rbitmapUserNoteCollectListKey); 
+                    });
+                    isCollected = true;
+                }
+            }
+            case NOTE_COLLECTED -> isCollected = true;
+        }
+        return isCollected;
+    }
+
+    /**
+     * 检查笔记是否点赞
+     *
+     * @param noteId
+     * @param userId
+     * @return
+     */
+    private boolean checkNoteIsLiked(Long noteId, Long userId) {
+        boolean isLiked = false;
+        // Roaring Bitmap Key
+        String rbitmapUserNoteLikeListKey = RedisKeyConstants.buildRBitmapUserNoteLikeListKey(userId);
+
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("/lua/rbitmap_note_like_only_check.lua")));
+        script.setResultType(Long.class);
+
+        Long result = redisTemplate.execute(script, Collections.singletonList(rbitmapUserNoteLikeListKey), noteId);
+
+        NoteLikeLuaResultEnum noteLikeLuaResultEnum = NoteLikeLuaResultEnum.valueOf(result);
+
+        if (Objects.isNull(noteLikeLuaResultEnum)) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+
+        switch (noteLikeLuaResultEnum) {
+            case NOT_EXIST -> {
+                int count = noteLikeDOMapper.selectNoteIsLiked(userId, noteId);
+                // 设置过期时间
+                long expireSeconds = 24 * 60 * 60 + RandomUtil.randomInt(24 * 60 * 60);
+                if (count > 0) {
+                    // 异步初始化 Roaring Bitmap
+                    threadPoolTaskExecutor.submit(() -> {
+                        batchAddNoteLike2RBitmapAndExpire(userId, expireSeconds, rbitmapUserNoteLikeListKey);
+                    });
+                    isLiked = true;
+                }
+            }
+            case NOTE_LIKED -> isLiked = true;
+        }
+        
+        return isLiked;
     }
 
     /**

@@ -84,6 +84,12 @@ public class NoteController {
         return noteService.unCollectNote(unCollectNoteReqVO);
     }
     
+    @PostMapping("/isLikedAndCollectedData")
+    @ApiOperationLog(description = "获取当前用户是否点赞、收藏数据")
+    public Response<FindNoteIsLikedAndCollectedRespVO> isLikedAndCollectedData(@RequestBody FindNoteIsLikedAndCollectedReqVO findNoteIsLikedAndCollectedReqVO) {
+        return noteService.isLikedAndCollectedData(findNoteIsLikedAndCollectedReqVO);
+    }
+    
     @PostMapping("/published/list")
     @ApiOperationLog(description = "用户主页-已发布笔记列表")
     public Response<FindPublishedNoteListRespVO> findPublishedNoteList(@RequestBody FindPublishedNoteListReqVO findPublishedNoteListReqVO) {

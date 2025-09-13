@@ -17,10 +17,12 @@
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
     <result column="status" jdbcType="TINYINT" property="status" />
     <result column="content_uuid" jdbcType="VARCHAR" property="contentUuid" />
+    <result column="topic_ids" jdbcType="VARCHAR" property="topicIds"/>
+    <result column="channel_id" jdbcType="BIGINT" property="channelId"/>
   </resultMap>
   <sql id="Base_Column_List">
     id, title, is_content_empty, creator_id, topic_id, topic_name, is_top, `type`, img_uris, 
-    video_uri, visible, create_time, update_time, `status`, content_uuid
+    video_uri, visible, create_time, update_time, `status`, content_uuid, topic_ids, channel_id
   </sql>
   <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
     select 
@@ -55,12 +57,12 @@
       creator_id, topic_id, topic_name, 
       is_top, `type`, img_uris, video_uri, 
       visible, create_time, update_time, 
-      `status`, content_uuid)
+      `status`, content_uuid, topic_Ids, channel_id)
     values (#{id,jdbcType=BIGINT}, #{title,jdbcType=VARCHAR}, #{isContentEmpty,jdbcType=BIT}, 
       #{creatorId,jdbcType=BIGINT}, #{topicId,jdbcType=BIGINT}, #{topicName,jdbcType=VARCHAR}, 
       #{isTop,jdbcType=BIT}, #{type,jdbcType=TINYINT}, #{imgUris,jdbcType=VARCHAR}, #{videoUri,jdbcType=VARCHAR}, 
       #{visible,jdbcType=TINYINT}, #{createTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP}, 
-      #{status,jdbcType=TINYINT}, #{contentUuid,jdbcType=VARCHAR})
+      #{status,jdbcType=TINYINT}, #{contentUuid,jdbcType=VARCHAR}, #{topicIds,jdbcType=VARCHAR},#{channelId,jdbcType=BIGINT})
   </insert>
   <insert id="insertSelective" parameterType="com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteDO">
     insert into t_note

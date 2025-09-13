@@ -125,7 +125,7 @@ public class DeleteCommentConsumer implements RocketMQListener<String> {
         CommentDO oneLevelCommentDO = commentDOMapper.selectByPrimaryKey(parentCommentId);
         Long firstReplyCommentId = oneLevelCommentDO.getFirstReplyCommentId();
 
-        if (Objects.equals(parentCommentId, firstReplyCommentId)) {
+        if (Objects.equals(commentId, firstReplyCommentId)) {
             // 查询数据库，重新获取一级评论最早回复的评论
             CommentDO earliestCommentDO = commentDOMapper.selectEarliestByParentId(parentCommentId);
             // 最早回复的那条评论 ID。若查询结果为 null, 则最早回复的评论 ID 为 null

@@ -8,7 +8,7 @@
     </parent>
     <packaging>jar</packaging>
     
-    <artifactId>xiaohonghsu-search-api</artifactId>
+    <artifactId>xiaohongshu-search-api</artifactId>
     <name>${project.artifactId}</name>
     <description>RPC层, 供其他服务调用</description>
     

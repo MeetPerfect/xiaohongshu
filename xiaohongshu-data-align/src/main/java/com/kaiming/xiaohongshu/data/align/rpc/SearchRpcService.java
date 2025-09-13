@@ -31,7 +31,7 @@ public class SearchRpcService {
         RebuildNoteDocumentReqDTO rebuildNoteDocumentReqDTO = RebuildNoteDocumentReqDTO.builder()
                 .id(noteId)
                 .build();
-        Response<?> response = searchFeignApi.rebuildNoteDocument(rebuildNoteDocumentReqDTO);
+        searchFeignApi.rebuildNoteDocument(rebuildNoteDocumentReqDTO);
         
     }
 

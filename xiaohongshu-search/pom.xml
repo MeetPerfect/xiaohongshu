@@ -6,15 +6,15 @@
         <artifactId>xiaohongshu</artifactId>
         <version>${revision}</version>
     </parent>
-
+    
     <packaging>pom</packaging>
+    <modules>
+        <module>xiaohongshu-search-api</module>
+        <module>xiaohongshu-search-biz</module>
+    </modules>
 
     <artifactId>xiaohongshu-search</artifactId>
     <name>${project.artifactId}</name>
     <description>小红书搜索服务</description>
 
-    <modules>
-        <module>xiaohonghsu-search-api</module>
-        <module>xiaohongshu-search-biz</module>
-    </modules>
 </project>

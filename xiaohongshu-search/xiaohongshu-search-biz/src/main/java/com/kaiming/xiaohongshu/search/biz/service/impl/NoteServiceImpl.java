@@ -271,12 +271,12 @@ public class NoteServiceImpl implements NoteService {
         // 笔记Id
         Long noteId = rebuildNoteDocumentReqDTO.getId();
         // 从数据库查询 Elasticsearch 索引数据
-        List<Map<String, Object>> result = selectMapper.selectEsNoteIndexData(null, noteId);
+        List<Map<String, Object>> result = selectMapper.selectEsNoteIndexData(noteId, null);
 
         // 遍历
         for (Map<String, Object> recordMap : result) {
             // 创建索引请求对象，指定索引名称
-            IndexRequest indexRequest = new IndexRequest();
+            IndexRequest indexRequest = new IndexRequest(NoteIndex.NAME);
             // 设置文档的 ID，使用记录中的主键 “id” 字段值
             indexRequest.id(String.valueOf(recordMap.get(NoteIndex.FIELD_NOTE_ID)));
             // 设置文档的内容，使用查询结果的记录数据

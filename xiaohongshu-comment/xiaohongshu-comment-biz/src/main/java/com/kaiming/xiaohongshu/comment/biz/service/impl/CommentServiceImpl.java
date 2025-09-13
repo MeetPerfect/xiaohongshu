@@ -1253,7 +1253,7 @@ public class CommentServiceImpl implements CommentService {
             commentRespVOS.add(oneLevelCommentRespVO);
         }
 
-        // 异步将笔记详情，同步到 Redis 中
+        // 异步将评论详情，同步到 Redis 中
         threadPoolTaskExecutor.execute(() -> {
             // 批量写入数据
             Map<String, Object> data = Maps.newHashMap();

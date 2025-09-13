@@ -70,7 +70,7 @@ public interface MQConstants {
     /**
      * Topic: 计数 - 评论点赞数落库
      */
-    String TOPIC_COUNT_COMMENT_LIKE_2_DB = "CountCommentLike2DBTTopic";
+    String TOPIC_COUNT_COMMENT_LIKE_2_DB = "CountCommentLike2DBTopic";
 
     /**
      * Topic: 评论热度值更新

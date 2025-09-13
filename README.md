@@ -1,5 +1,5 @@
 # xiaohongshu
-仿小红书社区
+[仿小红书社区](http://39.96.162.218/discover)
 
 ![](https://img.shields.io/github/stars/meetPerfect/xiaohongshu)![](https://img.shields.io/github/forks/MeetPerfect/xiaohongshu)![](https://img.shields.io/badge/lincese-GPL-brightgreen)
 
@@ -29,6 +29,7 @@
 | Snipaste           | 屏幕截图工具        | https://www.snipaste.com/                       |
 | Typora             | Markdown编辑器      | https://typora.io/                              |
 | Presson            | 流程图              | https://www.processon.com/                      |
+| drawio             | 流程图              | https://www.drawio.com/                         |
 
 
 
@@ -122,13 +123,39 @@
 
 
 
+#### 思维导图
+
+[思维导图](https://www.processon.com/v/68c3d3b3db87250747e98e72?cid=688dec0e778e656a486c0da8)
+
+#### 业务逻辑
+
+[用户关系服务](https://drive.google.com/file/d/1_cpHCanniA6XVL0we1Pvnzu_SclqaJSJ/view?usp=sharing)
+
+[认证服务](https://drive.google.com/file/d/1FO_gFxcrP_MDWTocKzNBXW_DdhacJ6DI/view?usp=sharing)
+
+[评论服务](https://drive.google.com/file/d/1iV_Q0lE87H15hzXJ0SrzgKYdsQe5m26Q/view?usp=sharing)
+
+计数服务
+
+[笔记服务](https://drive.google.com/file/d/1QBiY0aKLXbkkb2WxGQZU4yGh4IzBCBjE/view?usp=sharing)
+
+搜索服务
+
+[用户服务](https://drive.google.com/file/d/13eZakCubwXmspiTtVJ1hoJ3VU2mO6snC/view?usp=sharing)
+
 
 
 
 
 ## TODO
 
+#### 评论服务
 
++ 评论发布异步发送 MQ 写入数据库，若失败重试多次则MQ消息写入数据库，将通过定时任务扫表，将发送失败的 MQ 再次发送，最终发送成功后，将该记录物理删除
+
+#### 笔记服务
+
++ 笔记点赞、取消点赞改为批量写库
 
 #### 用户关系服务
 

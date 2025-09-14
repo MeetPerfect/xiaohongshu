@@ -55,4 +55,20 @@ public interface NoteDOMapper {
      */
     List<NoteDO> selectPublishedNoteListByUserIdAndCursor(@Param("creatorId") Long creatorId,
                                                           @Param("cursor") Long cursor);
+
+    /**
+     * 根据频道Id查询笔记个数
+     * @param channel
+     * @return
+     */
+    int selectTotalCount(Long channel);
+
+    /**
+     * 根据频道Id分页查询笔记
+     * @param channelId
+     * @param offset
+     * @param pageSize
+     * @return
+     */
+    List<NoteDO> selectPageList(@Param("channelId") Long channelId, @Param("offset") long offset, @Param("pageSize") long pageSize);
 }

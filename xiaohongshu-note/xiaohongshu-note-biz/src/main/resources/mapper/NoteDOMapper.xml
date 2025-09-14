@@ -48,7 +48,15 @@
       order by id desc 
       limit 20
     </select>
-    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    <select id="selectTotalCount" resultType="int">
+      select count(*) from t_note where channel_id = #{channelId} and visible = 0 and status = 1
+    </select>
+  <select id="selectPageList" resultMap="BaseResultMap">
+    select
+        <include refid="Base_Column_List"/>
+        from t_note where channel_id = #{channelId} and visible = 0 and status = 1 order by create_time limit #{offset}, #{pageSize}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_note
     where id = #{id,jdbcType=BIGINT}
   </delete>

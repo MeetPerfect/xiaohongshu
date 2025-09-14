@@ -56,7 +56,28 @@
         <include refid="Base_Column_List"/>
         from t_note where channel_id = #{channelId} and visible = 0 and status = 1 order by create_time limit #{offset}, #{pageSize}
   </select>
-  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+  <select id="selectTotalCountByCreatorId" resultType="int">
+    select count(*) from t_note where creator_id = #{creatorId} and visible = 0 and status = 1 order by create_time desc
+  </select>
+    <select id="selectPageListByCreatorId"
+            resultMap="BaseResultMap">
+      select
+      <include refid="Base_Column_List" />
+      from t_note where visible = 0 and status = 1
+      and creator_id = #{userId}
+      order by create_time desc
+      limit #{offset}, #{pageSize}
+    </select>
+    <select id="selectByNoteIds" resultMap="BaseResultMap">
+      select
+      <include refid="Base_Column_List" />
+      from t_note
+      where id in
+      <foreach collection="noteIds" item="noteId" open="(" separator="," close=")">
+        #{noteId}
+      </foreach>
+    </select>
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_note
     where id = #{id,jdbcType=BIGINT}
   </delete>

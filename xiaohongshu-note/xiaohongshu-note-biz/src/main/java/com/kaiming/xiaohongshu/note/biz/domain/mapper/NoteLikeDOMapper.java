@@ -75,4 +75,24 @@ public interface NoteLikeDOMapper {
      * @return
      */
     List<NoteLikeDO> selectByUserIdAndNoteId(@Param("userId") Long userId, @Param("noteIds") List<Long> noteIds);
+
+
+    /**
+     * 根据用户Id查询用户点赞的笔记个数
+     * @param userId
+     * @return
+     */
+    int selectTotalCountByUserId(@Param("userId") Long userId);
+
+
+    /**
+     * 根据用户Id 查询用户点赞的笔记Ids
+     * @param userId
+     * @param offset
+     * @param pageSize
+     * @return
+     */
+    List<Long> selectPageListByUserId(@Param("userId") Long userId,
+                                      @Param("offset") long offset,
+                                      @Param("pageSize") long pageSize);
 }

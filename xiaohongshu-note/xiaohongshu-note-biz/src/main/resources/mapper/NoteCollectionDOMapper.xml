@@ -30,6 +30,15 @@
     select note_id, create_time from t_note_collection
     where user_id = #{userId} and status = 1 order by create_time desc limit #{limit}
   </select>
+    <select id="selectTotalCountByUserId" resultType="int">
+      select count(*) from t_note_collect where user_id = #{userId} and status = 1
+    </select>
+  <select id="selectPageListByUserId" resultType="long">
+    select note_id from t_note_collection
+    where user_id = #{userId} and status = 1
+    order by create_time desc
+      limit #{offset}, #{pageSize}
+  </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_note_collection
     where id = #{id,jdbcType=BIGINT}

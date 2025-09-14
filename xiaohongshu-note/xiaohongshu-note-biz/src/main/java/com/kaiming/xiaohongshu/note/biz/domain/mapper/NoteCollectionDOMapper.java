@@ -1,6 +1,7 @@
 package com.kaiming.xiaohongshu.note.biz.domain.mapper;
 
 import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteCollectionDO;
+import com.kaiming.xiaohongshu.note.biz.domain.dataobject.NoteDO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -62,4 +63,21 @@ public interface NoteCollectionDOMapper {
      * @return
      */
     int update2UnCollectByUserIdAndNoteId(NoteCollectionDO noteCollectionDO);
+
+    /**
+     * 根据用户Id查询用户收藏数
+     * @param userId
+     * @return
+     */
+    int selectTotalCountByUserId(Long userId);
+
+
+    /**
+     * 根据用户Id分页查询用户收藏笔记Ids
+     * @param creator
+     * @param offset
+     * @param pageSize
+     * @return
+     */
+    List<Long> selectPageListByUserId(@Param("userId") Long creator, @Param("offset") long offset, @Param("pageSize") long pageSize);
 }

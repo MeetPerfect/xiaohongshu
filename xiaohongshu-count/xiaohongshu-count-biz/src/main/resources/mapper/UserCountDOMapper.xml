@@ -25,6 +25,15 @@
       from t_user_count
       where user_id = #{userId}
     </select>
+    <select id="selectByUserIds" resultMap="BaseResultMap">
+      select
+      <include refid="Base_Column_List" />
+      from t_user_count
+      where user_id in 
+      <foreach collection="userIds" item="id" open="(" separator="," close=")">
+        #{id}
+      </foreach>
+    </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from t_user_count
     where id = #{id,jdbcType=BIGINT}

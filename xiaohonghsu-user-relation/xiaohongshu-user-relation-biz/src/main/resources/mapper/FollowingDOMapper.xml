@@ -26,7 +26,7 @@
     select count(1) from t_following where user_id = #{userId}
   </select>
   <select id="selectPageListByUserId" resultMap="BaseResultMap" parameterType="map">
-    select following_user_id, from t_following
+    select following_user_id from t_following
     where user_id = #{userId} order by create_time desc limit #{offset}, #{limit}
   </select>
   <select id="selectAllByUserId" resultMap="BaseResultMap">

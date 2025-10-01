@@ -146,10 +146,10 @@ public class AuthServiceImpl implements AuthService {
         // 指定用户ID退出
         Long userId = LoginUserContextHolder.getUserId();
         log.info("==> 用户退出登录, userId: {}", userId);
-        threadPoolTaskExecutor.submit(() -> {
-            Long userId1 = LoginUserContextHolder.getUserId();
-            log.info("==> 异步线程中获取 userId: {}", userId1);
-        });
+//        threadPoolTaskExecutor.submit(() -> {
+//            Long userId1 = LoginUserContextHolder.getUserId();
+//            log.info("==> 异步线程中获取 userId: {}", userId1);        // null
+//        });
 
         StpUtil.logout(userId);
         return Response.success();

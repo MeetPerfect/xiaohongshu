@@ -1769,7 +1769,7 @@ public class NoteServiceImpl implements NoteService {
             Boolean hasKey = redisTemplate.hasKey(userNoteLikeZSetKey);
 
             // 不存在，则重新初始化
-            if (Boolean.FALSE.equals(hasKey)) {
+            if (!hasKey) {
                 // 查询当前用户最新点赞的 100 篇笔记
                 List<NoteLikeDO> noteLikeDOS = noteLikeDOMapper.selectLikedByUserIdAndLimit(userId, 100);
                 if (CollUtil.isNotEmpty(noteLikeDOS)) {
@@ -1898,6 +1898,12 @@ public class NoteServiceImpl implements NoteService {
                 Long creatorId = noteDOMapper.selectCreatorIdByNoteId(noteId);
                 // 数据库不存在，提示用户
                 if (Objects.isNull(creatorId)) {
+                    // 异步线程, Redis缓存中设置默认值或空值, 防止缓存穿透
+                    // 1分钟 + 随即收
+                    long expireTime = 60 + RandomUtil.randomInt(60);
+                    threadPoolTaskExecutor.submit(() ->{
+                       redisTemplate.opsForValue().set(noteDetailRedisKey, null, expireTime, TimeUnit.SECONDS); 
+                    });
                     throw new BizException(ResponseCodeEnum.NOTE_NOT_FOUND);
                 }
                 // 数据库存在，异步同步缓存
@@ -1912,7 +1918,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     private void checkNoteVisibleFromVO(Long userId, FindNoteDetailRespVO findNoteDetailRespVO) {
-        if (Objects.isNull(findNoteDetailRespVO)) {
+        if (Objects.nonNull(findNoteDetailRespVO)) {
             Integer visible = findNoteDetailRespVO.getVisible();
             checkNoteVisible(visible, userId, findNoteDetailRespVO.getCreatorId());
         }

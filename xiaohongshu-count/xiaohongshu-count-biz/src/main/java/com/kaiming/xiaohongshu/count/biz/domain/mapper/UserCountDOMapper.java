@@ -1,7 +1,10 @@
 package com.kaiming.xiaohongshu.count.biz.domain.mapper;
 
 import com.kaiming.xiaohongshu.count.biz.domain.dataobject.UserCountDO;
+import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdRespDTO;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 public interface UserCountDOMapper {
     int deleteByPrimaryKey(Long id);
@@ -63,4 +66,11 @@ public interface UserCountDOMapper {
      */
     int insertOrUpdateCollectTotalByUserId(@Param("count") Integer count, @Param("userId") Long userId);
 
+
+    /**
+     * 根据用户Ids批量查询用户计数
+     * @param userIds
+     * @return
+     */
+    List<UserCountDO> selectByUserIds(@Param("userIds") List<Long> userIds);
 }

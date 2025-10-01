@@ -9,6 +9,7 @@ import com.kaiming.framework.common.response.PageResponse;
 import com.kaiming.framework.common.response.Response;
 import com.kaiming.framework.common.util.DateUtils;
 import com.kaiming.framework.common.util.JsonUtils;
+import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdRespDTO;
 import com.kaiming.xiaohongshu.user.dto.resp.FindUserByIdRespDTO;
 import com.kaiming.xiaohongshu.user.relation.biz.constant.MQConstants;
 import com.kaiming.xiaohongshu.user.relation.biz.constant.RedisKeyConstants;
@@ -21,6 +22,7 @@ import com.kaiming.xiaohongshu.user.relation.biz.enums.ResponseCodeEnum;
 import com.kaiming.xiaohongshu.user.relation.biz.model.dto.FollowUserMqDTO;
 import com.kaiming.xiaohongshu.user.relation.biz.model.dto.UnfollowUserMqDTO;
 import com.kaiming.xiaohongshu.user.relation.biz.model.vo.*;
+import com.kaiming.xiaohongshu.user.relation.biz.rpc.CountRpcService;
 import com.kaiming.xiaohongshu.user.relation.biz.rpc.UserRpcService;
 import com.kaiming.xiaohongshu.user.relation.biz.service.RelationService;
 import jakarta.annotation.Resource;
@@ -38,10 +40,8 @@ import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * ClassName: RelationServiceImpl
@@ -57,6 +57,7 @@ import java.util.Set;
 public class RelationServiceImpl implements RelationService {
     @Resource
     private UserRpcService userRpcService;
+    @Resource CountRpcService countRpcService;
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
     @Resource
@@ -490,6 +491,10 @@ public class RelationServiceImpl implements RelationService {
         List<FindUserByIdRespDTO> findUserByIdRespDTOS = userRpcService.findByIds(userIds);
 
         // TODO RPC: 批量查询用户的计数数据（笔记总数、粉丝总数）
+        List<FindUserCountsByIdRespDTO> findUserCountsByIdRespDTOS = countRpcService.findUserCountsByIds(userIds);
+
+        Map<Long, FindUserCountsByIdRespDTO> countsByIdRespDTOMap = findUserCountsByIdRespDTOS.stream()
+                .collect(Collectors.toMap(FindUserCountsByIdRespDTO::getUserId, dto -> dto));
 
         // 若不为空
         if (CollUtil.isNotEmpty(findUserByIdRespDTOS)) {
@@ -498,8 +503,8 @@ public class RelationServiceImpl implements RelationService {
                             .userId(dto.getId())
                             .avatar(dto.getAvatar())
                             .nickname(dto.getNickName())
-                            .noteTotal(0L)      // TODO: 这块的数据暂无，后续补充
-                            .fansTotal(0L)      // TODO: 这块的数据暂无，后续补充
+                            .noteTotal(countsByIdRespDTOMap.get(dto.getId()) != null ? countsByIdRespDTOMap.get(dto.getId()).getNoteTotal() : 0L)      // TODO: 这块的数据暂无，后续补充
+                            .fansTotal(countsByIdRespDTOMap.get(dto.getId()) != null ? countsByIdRespDTOMap.get(dto.getId()).getFansTotal() : 0L)      // TODO: 这块的数据暂无，后续补充
                             .build())
                     .toList();
         }

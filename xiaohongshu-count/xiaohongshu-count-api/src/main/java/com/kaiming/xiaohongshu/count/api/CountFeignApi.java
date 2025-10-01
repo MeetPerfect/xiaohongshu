@@ -2,10 +2,7 @@ package com.kaiming.xiaohongshu.count.api;
 
 import com.kaiming.framework.common.response.Response;
 import com.kaiming.xiaohongshu.count.constant.ApiConstants;
-import com.kaiming.xiaohongshu.count.dto.FindNoteCountByIdReqDTO;
-import com.kaiming.xiaohongshu.count.dto.FindNoteCountByIdRespDTO;
-import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdReqDTO;
-import com.kaiming.xiaohongshu.count.dto.FindUserCountsByIdRespDTO;
+import com.kaiming.xiaohongshu.count.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,6 +31,14 @@ public interface CountFeignApi {
      */
     @PostMapping(value = PREFIX + "/user/data")
     Response<FindUserCountsByIdRespDTO> findUserCountData(@RequestBody FindUserCountsByIdReqDTO findUserCountsByIdReqDTO);
+
+    /**
+     * 批量查询用户计数
+     * @param findUserCountByIdsReqDTO
+     * @return
+     */
+    @PostMapping(value = PREFIX + "/user/list")
+    Response<List<FindUserCountsByIdRespDTO>> findUserCountsList(@RequestBody FindUserCountsByIdsReqDTO findUserCountByIdsReqDTO);
 
     /**
      * 查询笔记计数数据

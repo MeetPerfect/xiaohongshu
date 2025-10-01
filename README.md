@@ -1,7 +1,7 @@
 # xiaohongshu
 [仿小红书社区](http://39.96.162.218/discover)
 
-![](https://img.shields.io/github/stars/meetPerfect/xiaohongshu)![](https://img.shields.io/github/forks/MeetPerfect/xiaohongshu)![](https://img.shields.io/badge/lincese-GPL-brightgreen)
+![](https://img.shields.io/github/stars/meetPerfect/xiaohongshu)![](https://img.shields.io/github/forks/MeetPerfect/xiaohongshu)![](https://img.shields.io/badge/lincese-GPL-brightgreen) [![Issues](https://img.shields.io/github/issues/MeetPerfect/xiaohongshu)](https://github.com/MeetPerfect/xiaohongshu/issues) [![Last Commit](https://img.shields.io/github/last-commit/MeetPerfect/xiaohongshu)](https://github.com/MeetPerfect/xiaohongshu/commits)
 
 
 
@@ -64,15 +64,12 @@
 
 ### 前端
 
-| 技术       | 版本    | 说明                | 官网地址                                              |
-| ---------- | ------- | ------------------- | ----------------------------------------------------- |
-| Node.js    | 22.14.0 | 服务端的 JavaScript | https://nodejs.org/zh-cn                              |
-| Vue        |         | 前端框架            | https://vuejs.org/                                    |
-| Vue-router |         | 路由框架            | https://router.vuejs.org/                             |
-| Vuex       |         | 全局状态管理框架    | https://vuex.vuejs.org/                               |
-| Element    |         | 前端UI框架          | [https://element.eleme.io](https://element.eleme.io/) |
-|            |         |                     |                                                       |
-|            |         |                     |                                                       |
+| 技术       | 版本    | 说明                | 官网地址                  |
+| ---------- | ------- | ------------------- | ------------------------- |
+| Node.js    | 22.14.0 | 服务端的 JavaScript | https://nodejs.org/zh-cn  |
+| Vue        | 3.5.13  | 前端框架            | https://vuejs.org/        |
+| Vue-router | 4.5.0   | 路由框架            | https://router.vuejs.org/ |
+| vite       | 6.1.0   | 前端构建工具        | https://vite.dev/         |
 
 
 
@@ -159,4 +156,5 @@
 
 #### 用户关系服务
 
-+ 查询粉丝列表接口，RPC调用计数服务获取当前用户对应的笔记数和粉丝数；
++ 查询粉丝列表接口，RPC调用计数服务获取当前用户对应的笔记数和粉丝数后，需修改为批量写入Redis缓存；
++ 用户注册，采用编程式事务保证用户表和角色表数据一致性；

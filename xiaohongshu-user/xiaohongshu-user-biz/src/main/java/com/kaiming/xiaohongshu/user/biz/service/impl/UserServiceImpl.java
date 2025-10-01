@@ -470,7 +470,7 @@ public class UserServiceImpl implements UserService {
         // 从数据库中批量查询
         List<UserDO> userDOS = userDOMapper.selectByIds(userIdsNeedQuery);
         List<FindUserByIdRespDTO> findUserByIdRespDTOS2 = null;
-        ;
+        
 
         if (CollUtil.isNotEmpty(userDOS)) {
             // DO 转 DTO

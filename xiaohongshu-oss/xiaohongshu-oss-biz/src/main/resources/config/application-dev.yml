@@ -1,0 +1,12 @@
+
+
+storage:
+  minio:
+    endpoint: http://192.168.20.101:9000
+    accessKey: quanxiaoha
+    secretKey: quanxiaoha
+
+  aliyun-oss:
+    endpoint: 
+    accessKey: 
+    secretKey: 

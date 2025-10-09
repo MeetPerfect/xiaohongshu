@@ -253,13 +253,14 @@ public class CommentServiceImpl implements CommentService {
 
                 for (int i = 0; i < commentsJsonList.size(); i++) {
                     String commentJson = (String) commentsJsonList.get(i);
+                    Long commentId = Long.valueOf(localCacheExpiredCommentIds.get(i).toString());
                     // 缓存中存在的评论 Json，直接转换为 VO 添加到返参集合中
                     if (Objects.nonNull(commentJson)) {
                         FindCommentItemRespVO commentRespVO = JsonUtils.parseObject(commentJson, FindCommentItemRespVO.class);
                         commentRespVOS.add(commentRespVO);
                     } else {
                         // 评论失效，添加到失效评论列表
-                        expiredCommentIds.add(Long.valueOf(commentsJsonList.get(i).toString()));
+                        expiredCommentIds.add(commentId);
                     }
                 }
 
@@ -442,7 +443,7 @@ public class CommentServiceImpl implements CommentService {
                 for (int i = 0; i < commentsJsonList.size(); i++) {
                     String commentJson = (String) commentsJsonList.get(i);
                     Long commentId = Long.valueOf(childCommentIdList.get(i).toString());
-                    if (Objects.nonNull(commentId)) {
+                    if (Objects.nonNull(commentJson)) {
                         // 缓存中存在的评论 Json，直接转换为 VO 添加到返参集合中
                         FindChildCommentItemRespVO childCommentRespVO = JsonUtils.parseObject(commentJson, FindChildCommentItemRespVO.class);
                         childCommentRespVOS.add(childCommentRespVO);
@@ -762,10 +763,9 @@ public class CommentServiceImpl implements CommentService {
                 script.setResultType(Long.class);
 
                 List<Object> luaArgs = Lists.newArrayList();
-                commentLikeDOS.forEach(commentLikeDO -> {
-                    luaArgs.add(commentLikeDO.getCommentId());
-                    luaArgs.add(expireSeconds);
-                });
+                commentLikeDOS.forEach(commentLikeDO -> 
+                    luaArgs.add(commentLikeDO.getCommentId()));
+                luaArgs.add(expireSeconds);
                 redisTemplate.execute(script, Collections.singletonList(rbitmapUserCommentLikeListKey), luaArgs.toArray());
             }
 
@@ -793,6 +793,7 @@ public class CommentServiceImpl implements CommentService {
                 CommentDO commentDO = commentDOMapper.selectByPrimaryKey(commentId);
                 // 若数据库中，该评论也不存在，抛出业务异常
                 if (Objects.isNull(commentDO)) {
+                    // TODO
                     throw new BizException(ResponseCodeEnum.COMMENT_NOT_FOUND);
                 }
             }

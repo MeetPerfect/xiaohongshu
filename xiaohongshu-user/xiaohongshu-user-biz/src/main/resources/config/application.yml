@@ -10,7 +10,7 @@ spring:
     redis:
       database: 0
       host: 192.168.20.101
-      post: 6379
+      port: 6379
       password: 123456
       timeout: 5s # 读超时时间
       connect-timeout: 5s # 链接超时时间

@@ -103,7 +103,7 @@ public class NoteCountServiceImpl implements NoteCountService {
                     .collect(Collectors.toMap(NoteCountDO::getNoteId, noteCountDO -> noteCountDO));
 
             // 将笔记 Hash 计数同步到 Redis 中
-                syncNoteHash2Redis(findNoteCountsByIdRespDTOS, noteIdAndDOMap);
+            syncNoteHash2Redis(findNoteCountsByIdRespDTOS, noteIdAndDOMap);
 
             // 针对 DTO 中为 null 的计数字段，循环设置从数据库中查询到的计数
             for (FindNoteCountByIdRespDTO findNoteCountsByIdRespDTO : findNoteCountsByIdRespDTOS) {
@@ -160,7 +160,7 @@ public class NoteCountServiceImpl implements NoteCountService {
                                 Objects.nonNull(noteCountDO) ? noteCountDO.getLikeTotal() : 0);
                     }
                     if (Objects.isNull(collectTotal)) {
-                        countMap.put(RedisKeyConstants.FIELD_COLLECT_TOTAL, 
+                        countMap.put(RedisKeyConstants.FIELD_COLLECT_TOTAL,
                                 Objects.nonNull(noteCountDO) ? noteCountDO.getCollectTotal() : 0);
                     }
                     if (Objects.isNull(commentTotal)) {

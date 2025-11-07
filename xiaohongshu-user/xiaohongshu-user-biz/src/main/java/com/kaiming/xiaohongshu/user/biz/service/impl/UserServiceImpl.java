@@ -51,6 +51,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -242,6 +243,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response<Long> register(RegisterUserReqDTO registerUserReqDTO) {
 
         String phone = registerUserReqDTO.getPhone();
@@ -558,6 +560,7 @@ public class UserServiceImpl implements UserService {
         //  3. 再查询数据库
         UserDO userDO = userDOMapper.selectByPrimaryKey(userId);
         if (Objects.isNull(userDO)) {
+            // TODO
             throw new BizException(ResponseCodeEnum.USER_NOT_FOUND);
         }
         FindUserProfileRespVO findUserProfileRespVO = FindUserProfileRespVO.builder()

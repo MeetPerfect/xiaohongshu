@@ -619,7 +619,7 @@ public class NoteServiceImpl implements NoteService {
         boolean isUpdateSuccess = false;
         if (StringUtils.isBlank(content)) {
             // 若笔记内容为空, 删除K-V存储
-            if (!Objects.nonNull(contentUuid)) {
+            if (StringUtils.isNotBlank(contentUuid)) {
                 isUpdateSuccess = keyValueRpcService.deleteNoteContent(contentUuid);
             }
         } else {

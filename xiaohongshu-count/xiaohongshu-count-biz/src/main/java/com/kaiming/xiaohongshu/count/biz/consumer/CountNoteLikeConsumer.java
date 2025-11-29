@@ -86,7 +86,6 @@ public class CountNoteLikeConsumer implements RocketMQListener<String> {
             // 发布笔记作者 Id
             Long creatorId = null;
             List<CountLikeUnlikeNoteMqDTO> list = entry.getValue();
-            // 最终的计数值，默认为0
             // 最终的计数值，默认为 0
             int finalCount = 0;
             for (CountLikeUnlikeNoteMqDTO countLikeUnlikeNoteMqDTO : list) {

@@ -609,6 +609,26 @@ public class NoteServiceImpl implements NoteService {
 
         // 更新笔记元数据表
         String content = updateNoteReqVO.getContent();
+
+        // 笔记内容更新
+        // 查询笔记内容UUID
+        NoteDO oldNoteDO = noteDOMapper.selectByPrimaryKey(noteId);
+        String contentUuid = oldNoteDO.getContentUuid();
+
+        // 笔记内容是否更新成功
+        boolean isUpdateSuccess = false;
+        if (StringUtils.isBlank(content)) {
+            // 若笔记内容为空, 删除K-V存储
+            if (!Objects.nonNull(contentUuid)) {
+                isUpdateSuccess = keyValueRpcService.deleteNoteContent(contentUuid);
+            }
+        } else {
+            // 若将无内容的笔记，更新为了有内容的笔记，需要重新生成 UUID
+            contentUuid = StringUtils.isBlank(contentUuid) ? UUID.randomUUID().toString() : contentUuid;
+            // 调用 K-V 更新短文本
+            isUpdateSuccess = keyValueRpcService.saveNoteContent(contentUuid, content);
+        }
+        
         NoteDO noteDO = NoteDO.builder()
                 .id(noteId)
                 .isContentEmpty(StringUtils.isBlank(content))
@@ -619,6 +639,7 @@ public class NoteServiceImpl implements NoteService {
                 .type(noteType)
                 .updateTime(LocalDateTime.now())
                 .videoUri(videoUri)
+                .contentUuid(contentUuid)
                 .build();
 
         noteDOMapper.updateByPrimaryKey(noteDO);
@@ -631,22 +652,7 @@ public class NoteServiceImpl implements NoteService {
         // 同步发送广播模式 MQ，将所有实例中的本地缓存都删除掉
         rocketMQTemplate.syncSend(MQConstants.TOPIC_DELETE_NOTE_LOCAL_CACHE, noteId);
         log.info("====> MQ：删除笔记本地缓存发送成功...");
-        // 笔记内容更新
-        // 查询笔记内容UUID
-        NoteDO noteDO1 = noteDOMapper.selectByPrimaryKey(noteId);
-        String contentUuid = noteDO1.getContentUuid();
-
-        // 笔记内容是否更新成功
-        boolean isUpdateSuccess = false;
-        if (StringUtils.isBlank(content)) {
-            // 若笔记内容为空, 删除K-V存储
-            isUpdateSuccess = keyValueRpcService.deleteNoteContent(contentUuid);
-        } else {
-            // 若将无内容的笔记，更新为了有内容的笔记，需要重新生成 UUID
-            contentUuid = StringUtils.isBlank(contentUuid) ? UUID.randomUUID().toString() : contentUuid;
-            // 调用 K-V 更新短文本
-            isUpdateSuccess = keyValueRpcService.saveNoteContent(contentUuid, content);
-        }
+        
         if (!isUpdateSuccess) {
             throw new BizException(ResponseCodeEnum.NOTE_UPDATE_FAIL);
         }

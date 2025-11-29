@@ -15,7 +15,7 @@ bin/
 *.ipr
 *.lock
 rebel.xml
-**/*.flattened-pom.xml
+**/.flattened-pom.xml
 
 ### NetBeans ###
 /nbproject/private/

@@ -57,7 +57,8 @@ import java.util.stream.Collectors;
 public class RelationServiceImpl implements RelationService {
     @Resource
     private UserRpcService userRpcService;
-    @Resource CountRpcService countRpcService;
+    @Resource 
+    private CountRpcService countRpcService;
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
     @Resource

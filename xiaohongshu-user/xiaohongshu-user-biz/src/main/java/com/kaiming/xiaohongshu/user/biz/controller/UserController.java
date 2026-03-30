@@ -52,7 +52,7 @@ public class UserController {
         return userService.register(registerUserReqDTO);
     }
     
-    @PostMapping("findByPhone")
+    @PostMapping("/findByPhone")
     @ApiOperationLog(description = "根据手机号查询用户信息")
     public Response<FindUserByPhoneRespDTO> findByPhone(@RequestBody FindUserByPhoneReqDTO findUserByPhoneReqDTO) {
         return userService.findByPhone(findUserByPhoneReqDTO);
